@@ -1,10 +1,15 @@
 from typing import Any, Dict, List
 
+import requests
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 app = FastAPI(title="Chum Buddies")
+
+class Message(BaseModel):
+    text: str
+    target_lang: str
 
 class MatchRequest(BaseModel):
     target_user: Dict[str, Any]
@@ -58,3 +63,25 @@ def get_matches(target_user, all_users):
 async def match_users(request: MatchRequest):
     matches = get_matches(request.target_user, request.all_users)
     return {"matches": matches}
+
+@app.post("/api/translate")
+async def translate_text_endpoint(payload: Message):
+    original_text = payload.text
+    target_lang = payload.target_lang
+    
+    if not original_text or not target_lang:
+        return {"translated": original_text}
+
+    try:
+        url = f"https://api.mymemory.translated.net/get?q={requests.utils.quote(original_text)}&langpair=en|{target_lang}"
+        r = requests.get(url)
+        data = r.json()
+        translated_text = data.get("responseData", {}).get("translatedText", original_text)
+        
+        # Guard against MyMemory spam/error tokens
+        if not translated_text or "TESTVALUE" in translated_text.upper():
+            return {"original": original_text, "translated": original_text}
+            
+        return {"original": original_text, "translated": translated_text}
+    except Exception as e:
+        return {"original": original_text, "translated": original_text, "error": str(e)}
