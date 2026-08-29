@@ -2,12 +2,16 @@
    APP NAVBAR
    ========================= */
 
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
 .app-navbar {
   position: relative;
   z-index: 100;
 
   width: 100%;
-  height: 72px;
+  min-height: 72px;
 
   display: flex;
   align-items: center;
@@ -20,7 +24,6 @@
   border-top: 5px solid var(--ochre);
   border-bottom: 1px solid #d7d8da;
 }
-
 
 /* =========================
    LOGO
@@ -38,6 +41,7 @@
   letter-spacing: -0.05em;
 
   text-decoration: none;
+  flex-shrink: 0;
 }
 
 .app-navbar-logo > span {
@@ -55,7 +59,6 @@
   color: var(--white);
 }
 
-
 /* =========================
    NAVIGATION
    ========================= */
@@ -67,12 +70,15 @@
   gap: 8px;
 }
 
-
 /* =========================
    LINKS
    ========================= */
 
 .app-navbar-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
   padding: 9px 13px;
 
   border-radius: 9px;
@@ -83,6 +89,7 @@
   font-weight: 800;
 
   text-decoration: none;
+  white-space: nowrap;
 
   transition:
     background 0.15s ease,
@@ -102,12 +109,15 @@
   color: var(--white);
 }
 
-
 /* =========================
    SIGN OUT
    ========================= */
 
 .app-navbar-signout {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
   margin-left: 8px;
 
   padding: 9px 13px;
@@ -122,6 +132,7 @@
   font-weight: 800;
 
   cursor: pointer;
+  white-space: nowrap;
 
   transition:
     background 0.15s ease,
@@ -136,35 +147,69 @@
   color: var(--white);
 }
 
-
 /* =========================
-   MOBILE
+   MOBILE RESPONSIVE
    ========================= */
 
 @media (max-width: 650px) {
   .app-navbar {
-    padding: 0 4%;
+    padding: 0 12px;
+    gap: 8px; /* Spacing between logo and links container */
   }
 
   .app-navbar-logo {
-    font-size: 17px;
+    font-size: 16px;
+  }
+
+  .app-navbar-logo strong {
+    padding: 3px 5px;
+  }
+
+  .app-navbar-links {
+    flex: 1;
+    display: flex;
+    overflow-x: auto; /* Enable touch horizontal scroll */
+    white-space: nowrap;
+    -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+
+    /* Hide scrollbars visually while keeping scroll functionality */
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none;  /* IE/Edge */
+  }
+
+  .app-navbar-link {
+    padding: 8px 10px;
+    font-size: 12px;
+    min-height: 38px;
+  }
+  .app-navbar-links::-webkit-scrollbar {
+    display: none; /* Chrome, Safari, Opera */
+  }
+  .app-navbar-signout {
+    margin-left: 4px;
+    padding: 8px 10px;
+    font-size: 12px;
+    min-height: 38px;
+  }
+}
+
+/* Small Screen Adaptation (Under 400px) */
+@media (max-width: 400px) {
+  .app-navbar {
+    padding: 10px 12px;
+  }
+
+  .app-navbar-logo {
+    font-size: 15px;
   }
 
   .app-navbar-links {
     gap: 2px;
   }
 
-  .app-navbar-link {
-    padding: 8px 9px;
-
-    font-size: 12px;
-  }
-
+  .app-navbar-link,
   .app-navbar-signout {
-    margin-left: 2px;
-
-    padding: 8px 9px;
-
-    font-size: 12px;
+    padding: 6px 7px;
+    font-size: 11px;
   }
 }
