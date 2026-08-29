@@ -11,7 +11,11 @@ function UserProfilePage() {
   
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [messageLoading, setMessageLoading] = useState(false);
 
+  // -----------------------------------------
+  // LOAD USER PROFILE
+  // -----------------------------------------
   useEffect(() => {
     async function fetchUser() {
       try {
@@ -19,9 +23,12 @@ function UserProfilePage() {
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
           setProfile({ id: docSnap.id, ...docSnap.data() });
+        } else {
+          setProfile(null);
         }
       } catch (error) {
         console.error("Error fetching user:", error);
+        setProfile(null);
       } finally {
         setLoading(false);
       }
@@ -29,9 +36,16 @@ function UserProfilePage() {
     fetchUser();
   }, [userId]);
 
+  // -----------------------------------------
+  // OPEN / CREATE CHAT
+  // -----------------------------------------
   async function handleMessage() {
     const currentUser = auth.currentUser;
-    if (!currentUser) return;
+    
+    if (!currentUser || !profile || messageLoading) return;
+    if (currentUser.uid === profile.id) return;
+
+    setMessageLoading(true);
 
     try {
       // 1. Check if a chat already exists between these two users
@@ -40,10 +54,10 @@ function UserProfilePage() {
       const snapshot = await getDocs(q);
       
       let existingChatId = null;
-      snapshot.forEach((doc) => {
-        const data = doc.data();
-        if (data.participants.includes(profile.id)) {
-          existingChatId = doc.id;
+      snapshot.forEach((chatDoc) => {
+        const data = chatDoc.data();
+        if (data.participants && data.participants.includes(profile.id)) {
+          existingChatId = chatDoc.id;
         }
       });
 
@@ -60,9 +74,14 @@ function UserProfilePage() {
       }
     } catch (error) {
       console.error("Error starting chat:", error);
+    } finally {
+      setMessageLoading(false);
     }
   }
 
+  // -----------------------------------------
+  // LOADING & NOT FOUND STATES
+  // -----------------------------------------
   if (loading) {
     return (
       <main className="public-profile-page">
@@ -79,6 +98,9 @@ function UserProfilePage() {
     );
   }
 
+  // -----------------------------------------
+  // PAGE RENDER
+  // -----------------------------------------
   return (
     <main className="public-profile-page">
       <header className="public-profile-navbar">
@@ -92,29 +114,38 @@ function UserProfilePage() {
       <div className="public-profile-container">
         <section className="public-profile-card">
           <div className="public-profile-top">
+            
+            {/* PROFILE PICTURE */}
             <div className="public-profile-picture">
               {profile.profilePicture ? (
                 <img src={profile.profilePicture} alt={`${profile.name}'s profile`} />
               ) : (
-                <span>{profile.name?.charAt(0).toUpperCase()}</span>
+                <span>{profile.name ? profile.name.charAt(0).toUpperCase() : "?"}</span>
               )}
             </div>
 
+            {/* IDENTITY */}
             <div className="public-profile-identity">
               <p className="public-profile-eyebrow">STUDENT PROFILE</p>
-              <h1>{profile.name}</h1>
+              <h1>{profile.name || "USYD Student"}</h1>
               {profile.pronouns && <p className="public-profile-pronouns">{profile.pronouns}</p>}
               {profile.bio && <p className="public-profile-bio">{profile.bio}</p>}
             </div>
 
-            {/* Hide the message button if looking at your own profile */}
+            {/* MESSAGE BUTTON (Hidden if viewing own profile) */}
             {auth.currentUser?.uid !== profile.id && (
-              <button type="button" className="public-message-button" onClick={handleMessage}>
-                Message
+              <button
+                type="button"
+                className="public-message-button"
+                onClick={handleMessage}
+                disabled={messageLoading}
+              >
+                {messageLoading ? "Opening..." : "Message"}
               </button>
             )}
           </div>
 
+          {/* STUDY SECTION */}
           {(profile.degree || profile.major || profile.second_major_minor) && (
             <section className="public-profile-section">
               <h2>Study</h2>
@@ -141,24 +172,32 @@ function UserProfilePage() {
             </section>
           )}
 
+          {/* TAGS */}
           <ProfileTags title="Languages" items={profile.languages} />
           <ProfileTags title="Interests" items={profile.interests} highlight />
           <ProfileTags title="Societies" items={profile.societies} highlight />
+          
         </section>
       </div>
     </main>
   );
 }
 
+// -----------------------------------------
+// PROFILE TAG SECTION
+// -----------------------------------------
 function ProfileTags({ title, items = [], highlight = false }) {
-  if (!items.length) return null;
+  if (!items?.length) return null;
 
   return (
     <section className="public-profile-section">
       <h2>{title}</h2>
       <div className="public-profile-tags">
         {items.map((item) => (
-          <span key={item} className={highlight ? "public-profile-tag highlighted" : "public-profile-tag"}>
+          <span
+            key={item}
+            className={highlight ? "public-profile-tag highlighted" : "public-profile-tag"}
+          >
             {item}
           </span>
         ))}

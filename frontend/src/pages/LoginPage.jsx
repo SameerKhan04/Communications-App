@@ -72,7 +72,7 @@ function LoginPage() {
 
           <h1 className="brand-name">
             <span className="brand-white">CHUM</span>
-            <span className="brand-black">BUDDY</span>
+            <span className="brand-black">BUDDIES</span>
           </h1>
 
           <p className="brand-description">
@@ -150,7 +150,7 @@ function LoginPage() {
           </button>
 
           <p className="account-note">
-            New to Chum Buddy? Create an account using your University of Sydney email.
+            New to Chum Buddies? Create an account using your University of Sydney email.
           </p>
         </div>
       </section>

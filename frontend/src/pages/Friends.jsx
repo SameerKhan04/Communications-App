@@ -1,19 +1,23 @@
 import { addDoc, collection, doc, getDoc, getDocs, query, serverTimestamp, where } from "firebase/firestore";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
+
 import { auth, db } from "../firebase";
+
 import "./Friends.css";
 
 function Friends() {
   const navigate = useNavigate();
+
+  const [friends, setFriends] = useState([]);
   const [search, setSearch] = useState("");
-  
-  // New State variables for Firebase data
-  const [friendsList, setFriendsList] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // -----------------------------------------
+  // LOAD FRIENDS FROM FIREBASE
+  // -----------------------------------------
+
   useEffect(() => {
-    // Use the auth observer to ensure we have the signed-in user
     const unsubscribe = auth.onAuthStateChanged(async (user) => {
       if (!user) {
         navigate("/login");
@@ -21,53 +25,60 @@ function Friends() {
       }
 
       try {
-        // 1. Get the current user's document
-        const userDocRef = doc(db, "users", user.uid);
-        const userDoc = await getDoc(userDocRef);
+        const currentUserRef = doc(db, "users", user.uid);
+        const currentUserSnapshot = await getDoc(currentUserRef);
 
-        if (userDoc.exists()) {
-          const userData = userDoc.data();
-          
-          // Fallback to an empty array if the 'friends' field doesn't exist yet (like on new profiles)
-          const friendIds = userData.friends || [];
-
-          if (friendIds.length === 0) {
-            setFriendsList([]);
-            setLoading(false);
-            return;
-          }
-
-          // 2. Fetch the profile data for every ID in the friends array
-          const friendsData = await Promise.all(
-            friendIds.map(async (id) => {
-              const friendDoc = await getDoc(doc(db, "users", id));
-              if (friendDoc.exists()) {
-                const data = friendDoc.data();
-                return {
-                  id,
-                  name: data.name || "Unknown Chum",
-                  degree: data.degree || "Degree not listed",
-                  interests: data.interests || [],
-                  avatar: data.profilePicture ? (
-                    <img 
-                      src={data.profilePicture} 
-                      alt={data.name} 
-                      style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} 
-                    />
-                  ) : (
-                    (data.name ? data.name.charAt(0).toUpperCase() : "?")
-                  ),
-                };
-              }
-              return null;
-            })
-          );
-
-          // 3. Filter out any nulls (in case a friend deleted their account) and set state
-          setFriendsList(friendsData.filter(Boolean));
+        if (!currentUserSnapshot.exists()) {
+          setFriends([]);
+          setLoading(false);
+          return;
         }
+
+        const currentUserData = currentUserSnapshot.data();
+        const friendIds = currentUserData.friends || [];
+
+        if (friendIds.length === 0) {
+          setFriends([]);
+          setLoading(false);
+          return;
+        }
+
+        // Load each friend's profile
+        const friendProfiles = await Promise.all(
+          friendIds.map(async (friendId) => {
+            const friendRef = doc(db, "users", friendId);
+            const friendSnapshot = await getDoc(friendRef);
+
+            if (!friendSnapshot.exists()) {
+              return null;
+            }
+
+            const data = friendSnapshot.data();
+
+            return {
+              id: friendSnapshot.id,
+              name: data.name || "Unknown Chum",
+              degree: data.degree || "Degree not listed",
+              interests: data.interests || [],
+              avatar: data.profilePicture ? (
+                <img 
+                  src={data.profilePicture} 
+                  alt={data.name} 
+                  style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} 
+                />
+              ) : (
+                (data.name ? data.name.charAt(0).toUpperCase() : "?")
+              ),
+              ...data,
+            };
+          })
+        );
+
+        // Remove deleted / invalid users
+        setFriends(friendProfiles.filter(Boolean));
       } catch (error) {
-        console.error("Error fetching friends from Firebase:", error);
+        console.error("Error loading friends:", error);
+        setFriends([]);
       } finally {
         setLoading(false);
       }
@@ -76,23 +87,38 @@ function Friends() {
     return () => unsubscribe();
   }, [navigate]);
 
+  // -----------------------------------------
+  // SEARCH
+  // -----------------------------------------
+
   const filteredFriends = useMemo(() => {
     const query = search.trim().toLowerCase();
 
     if (!query) {
-      return friendsList;
+      return friends;
     }
 
-    return friendsList.filter((friend) => {
-      const nameMatch = friend.name.toLowerCase().includes(query);
-      const degreeMatch = friend.degree.toLowerCase().includes(query);
-      const interestMatch = friend.interests.some((interest) =>
-        interest.toLowerCase().includes(query)
+    return friends.filter((friend) => {
+      // Using your friend's safer fallback checks
+      const nameMatch = (friend.name || "")
+        .toLowerCase()
+        .includes(query);
+
+      const degreeMatch = (friend.degree || "")
+        .toLowerCase()
+        .includes(query);
+
+      const interestMatch = (friend.interests || []).some(
+        (interest) => interest.toLowerCase().includes(query)
       );
 
       return nameMatch || degreeMatch || interestMatch;
     });
-  }, [friendsList, search]);
+  }, [friends, search]);
+
+  // -----------------------------------------
+  // CHAT LOGIC
+  // -----------------------------------------
 
   async function handleStartChat(friendId) {
     const currentUser = auth.currentUser;
@@ -124,16 +150,37 @@ function Friends() {
       console.error("Error starting chat:", error);
     }
   }
-  
+
+  // -----------------------------------------
+  // LOADING
+  // -----------------------------------------
+
+  if (loading) {
+    return (
+      <main className="friends-page">
+        <section className="friends-shell">
+          <p>Loading friends...</p>
+        </section>
+      </main>
+    );
+  }
+
+  // -----------------------------------------
+  // PAGE
+  // -----------------------------------------
+
   return (
     <main className="friends-page">
+
       <div className="friends-background friends-background-one" />
       <div className="friends-background friends-background-two" />
 
       <section className="friends-shell">
+
+        {/* HEADER */}
         <header className="friends-header">
           <div>
-            <p className="friends-eyebrow">CHUM BUCKET</p>
+            <p className="friends-eyebrow">CHUM BUDDIES</p>
             <h1>Friends</h1>
             <p className="friends-subtitle">
               Your university chums, all in one place.
@@ -141,12 +188,12 @@ function Friends() {
           </div>
 
           <div className="friends-count">
-            {/* Show count based on actual fetched friends */}
-            <strong>{friendsList.length}</strong>
+            <strong>{friends.length}</strong>
             <span>chums</span>
           </div>
         </header>
 
+        {/* SEARCH */}
         <div className="friends-search">
           <span className="friends-search-icon">⌕</span>
 
@@ -170,12 +217,9 @@ function Friends() {
           )}
         </div>
 
+        {/* FRIEND LIST */}
         <div className="friends-list">
-          {loading ? (
-            <div className="friends-empty">
-              <h2>Loading friends...</h2>
-            </div>
-          ) : filteredFriends.length > 0 ? (
+          {filteredFriends.length > 0 ? (
             filteredFriends.map((friend) => (
               <article 
                 className="friend-card" 
@@ -189,14 +233,17 @@ function Friends() {
 
                   <div className="friend-information" style={{ flex: 1, padding: 0 }}>
                     <h2 style={{ margin: "0 0 4px", fontSize: "1.2rem", color: "var(--charcoal)" }}>
-                      {friend.name}
+                      {friend.name || "USYD Student"}
                     </h2>
-                    <p className="friend-degree" style={{ margin: "0 0 8px", fontSize: "0.9rem", color: "#666" }}>
-                      {friend.degree}
-                    </p>
+                    
+                    {friend.degree && (
+                      <p className="friend-degree" style={{ margin: "0 0 8px", fontSize: "0.9rem", color: "#666" }}>
+                        {friend.degree}
+                      </p>
+                    )}
 
                     <div className="friend-interests" style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
-                      {friend.interests.slice(0, 3).map((interest) => (
+                      {(friend.interests || []).slice(0, 3).map((interest) => (
                         <span 
                           key={interest} 
                           style={{ fontSize: "0.75rem", background: "var(--light-grey)", padding: "4px 8px", borderRadius: "12px", color: "var(--charcoal)" }}
@@ -234,13 +281,14 @@ function Friends() {
               <div className="friends-empty-icon">⌕</div>
               <h2>No chums found</h2>
               <p>
-                {friendsList.length === 0 
+                {friends.length === 0 
                   ? "You haven't added any friends yet. Get out there and meet some people!" 
                   : "Try searching for a different name, degree, or interest."}
               </p>
             </div>
           )}
         </div>
+
       </section>
     </main>
   );

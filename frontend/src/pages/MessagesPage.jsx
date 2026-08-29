@@ -1,4 +1,16 @@
-import { addDoc, arrayUnion, collection, doc, getDoc, getDocs, onSnapshot, query, serverTimestamp, updateDoc, where } from "firebase/firestore";
+import {
+  addDoc,
+  arrayUnion,
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  onSnapshot,
+  query,
+  serverTimestamp,
+  where,
+  writeBatch,
+} from "firebase/firestore";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { auth, db } from "../firebase";
@@ -18,13 +30,17 @@ function ChatRow({ chat, onClick }) {
 
   const name = otherUser?.name || `User ${otherUserId?.substring(0, 5)}...`;
   const avatar = otherUser?.profilePicture ? (
-    <img src={otherUser.profilePicture} alt={name} style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
+    <img 
+      src={otherUser.profilePicture} 
+      alt={name} 
+      style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} 
+    />
   ) : (
     name.charAt(0).toUpperCase()
   );
 
   return (
-    <div className="chat-row" onClick={onClick}>
+    <div className="chat-row" onClick={onClick} role="button" tabIndex={0}>
       <div className="chat-row-avatar" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         {avatar}
       </div>
@@ -38,140 +54,317 @@ function ChatRow({ chat, onClick }) {
 
 function MessagesPage() {
   const navigate = useNavigate();
+
   const [chats, setChats] = useState([]);
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const [friends, setFriends] = useState([]);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [friendEmail, setFriendEmail] = useState("");
   const [modalError, setModalError] = useState("");
+  const [addingFriend, setAddingFriend] = useState(false);
+
+  // -----------------------------------------
+  // AUTH + LIVE CHAT LIST
+  // -----------------------------------------
 
   useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged((user) => {
-      if (!user) return navigate("/login");
+    let unsubscribeChats = null;
 
-      // 1. Listen for active chats
-      const q = query(collection(db, "chats"), where("participants", "array-contains", user.uid));
-      onSnapshot(q, (snapshot) => {
-        const chatList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        // Sort by newest first
-        chatList.sort((a, b) => b.updatedAt?.toMillis() - a.updatedAt?.toMillis());
-        setChats(chatList);
-      });
+    const unsubscribeAuth = auth.onAuthStateChanged(async (user) => {
+      if (!user) {
+        navigate("/login");
+        return;
+      }
 
-      // 2. Load friends list
-      loadFriends(user.uid);
+      // Load friends
+      await loadFriends(user.uid);
+
+      // Listen for chats involving current user
+      const chatsQuery = query(
+        collection(db, "chats"),
+        where("participants", "array-contains", user.uid)
+      );
+
+      unsubscribeChats = onSnapshot(
+        chatsQuery,
+        (snapshot) => {
+          try {
+            const loadedChats = snapshot.docs.map((chatDoc) => ({
+              id: chatDoc.id,
+              ...chatDoc.data(),
+            }));
+
+            // Newest chats first
+            loadedChats.sort((a, b) => {
+              const timeA = a.updatedAt?.toMillis?.() || 0;
+              const timeB = b.updatedAt?.toMillis?.() || 0;
+              return timeB - timeA;
+            });
+
+            setChats(loadedChats);
+          } catch (error) {
+            console.error("Error loading chats:", error);
+          }
+        },
+        (error) => {
+          console.error("Chat listener error:", error);
+        }
+      );
     });
-    return () => unsubscribe();
+
+    return () => {
+      unsubscribeAuth();
+      if (unsubscribeChats) {
+        unsubscribeChats();
+      }
+    };
   }, [navigate]);
 
+  // -----------------------------------------
+  // LOAD FRIENDS
+  // -----------------------------------------
+
   async function loadFriends(uid) {
-    const userDoc = await getDoc(doc(db, "users", uid));
-    if (userDoc.exists() && userDoc.data().friends) {
-      const friendIds = userDoc.data().friends;
-      const loadedFriends = [];
-      for (const fId of friendIds) {
-        const fDoc = await getDoc(doc(db, "users", fId));
-        if (fDoc.exists()) loadedFriends.push({ id: fDoc.id, ...fDoc.data() });
+    try {
+      const currentUserSnapshot = await getDoc(doc(db, "users", uid));
+
+      if (!currentUserSnapshot.exists()) {
+        setFriends([]);
+        return;
       }
-      setFriends(loadedFriends);
+
+      const friendIds = currentUserSnapshot.data().friends || [];
+
+      if (friendIds.length === 0) {
+        setFriends([]);
+        return;
+      }
+
+      const friendProfiles = await Promise.all(
+        friendIds.map(async (friendId) => {
+          const friendSnapshot = await getDoc(doc(db, "users", friendId));
+
+          if (!friendSnapshot.exists()) {
+            return null;
+          }
+
+          return {
+            id: friendSnapshot.id,
+            ...friendSnapshot.data(),
+          };
+        })
+      );
+
+      setFriends(friendProfiles.filter(Boolean));
+    } catch (error) {
+      console.error("Error loading friends:", error);
+      setFriends([]);
     }
   }
 
-  async function handleAddFriend(e) {
-    e.preventDefault();
-    setModalError("");
+  // -----------------------------------------
+  // ADD MUTUAL FRIEND
+  // -----------------------------------------
+
+  async function handleAddFriend(event) {
+    event.preventDefault();
+
     const currentUser = auth.currentUser;
-    
-    if (friendEmail.toLowerCase() === currentUser.email?.toLowerCase()) {
-      return setModalError("You can't add yourself!");
+    if (!currentUser) return;
+
+    const cleanedEmail = friendEmail.trim().toLowerCase();
+    if (!cleanedEmail) return;
+
+    setModalError("");
+
+    if (cleanedEmail === currentUser.email?.toLowerCase()) {
+      setModalError("You can't add yourself.");
+      return;
     }
 
-    const usersRef = collection(db, "users");
-    const q = query(usersRef, where("email", "==", friendEmail.toLowerCase()));
-    const snapshot = await getDocs(q);
+    setAddingFriend(true);
 
-    if (snapshot.empty) {
-      return setModalError("No user found with that email.");
+    try {
+      // Find user by email
+      const usersQuery = query(
+        collection(db, "users"),
+        where("email", "==", cleanedEmail)
+      );
+
+      const snapshot = await getDocs(usersQuery);
+
+      if (snapshot.empty) {
+        setModalError("No user found with that email.");
+        return;
+      }
+
+      const newFriendDocument = snapshot.docs[0];
+      const newFriendId = newFriendDocument.id;
+
+      // Check existing friendship
+      const alreadyFriends = friends.some((friend) => friend.id === newFriendId);
+
+      if (alreadyFriends) {
+        setModalError("This person is already in your friends list.");
+        return;
+      }
+
+      // -----------------------------------------
+      // MUTUAL FRIENDSHIP BATCH UPDATE
+      // -----------------------------------------
+      const batch = writeBatch(db);
+      
+      const currentUserRef = doc(db, "users", currentUser.uid);
+      const newFriendRef = doc(db, "users", newFriendId);
+
+      // Add friend to current user
+      batch.update(currentUserRef, {
+        friends: arrayUnion(newFriendId),
+      });
+
+      // Add current user to friend
+      batch.update(newFriendRef, {
+        friends: arrayUnion(currentUser.uid),
+      });
+
+      await batch.commit();
+
+      setFriendEmail("");
+      await loadFriends(currentUser.uid);
+    } catch (error) {
+      console.error("Error adding friend:", error);
+      setModalError("Something went wrong while adding this friend.");
+    } finally {
+      setAddingFriend(false);
     }
-
-    const newFriend = snapshot.docs[0];
-    
-    await updateDoc(doc(db, "users", currentUser.uid), {
-      friends: arrayUnion(newFriend.id)
-    });
-
-    setFriendEmail("");
-    loadFriends(currentUser.uid);
   }
+
+  // -----------------------------------------
+  // START / OPEN CHAT
+  // -----------------------------------------
 
   async function startChat(friendId) {
     const currentUser = auth.currentUser;
-    
-    const existingChat = chats.find(c => c.participants.includes(friendId));
-    if (existingChat) {
-      return navigate(`/messages/${existingChat.id}`);
+    if (!currentUser) return;
+
+    try {
+      // Check loaded chats first
+      const existingChat = chats.find((chat) => {
+        const participants = chat.participants || [];
+        return (
+          participants.includes(currentUser.uid) &&
+          participants.includes(friendId)
+        );
+      });
+
+      if (existingChat) {
+        navigate(`/messages/${existingChat.id}`);
+        return;
+      }
+
+      // Create conversation if it doesn't exist
+      const newChat = await addDoc(collection(db, "chats"), {
+        participants: [currentUser.uid, friendId],
+        lastMessage: "Say hi!",
+        updatedAt: serverTimestamp(),
+      });
+
+      navigate(`/messages/${newChat.id}`);
+    } catch (error) {
+      console.error("Error starting chat:", error);
     }
-
-    const newChat = await addDoc(collection(db, "chats"), {
-      participants: [currentUser.uid, friendId],
-      updatedAt: serverTimestamp(),
-      lastMessage: "Say hi!"
-    });
-
-    navigate(`/messages/${newChat.id}`);
   }
+
+  // -----------------------------------------
+  // PAGE RENDER
+  // -----------------------------------------
 
   return (
     <main className="messages-page">
-      <header className="public-profile-navbar">
-        <div className="public-profile-logo" onClick={() => navigate("/profile")} style={{cursor: "pointer"}}>
-          <span>CHUM</span><strong>BUCKET</strong>
-        </div>
-        <span>Direct Messages</span>
-      </header>
-
       <div className="messages-container">
+        
+        {/* HEADER */}
         <div className="messages-header">
           <h1>Messages</h1>
-          <button className="new-chat-button" onClick={() => setIsModalOpen(true)}>+ New Chat</button>
+          <button
+            type="button"
+            className="new-chat-button"
+            onClick={() => {
+              setModalError("");
+              setFriendEmail("");
+              setIsModalOpen(true);
+            }}
+          >
+            + New Chat
+          </button>
         </div>
 
+        {/* CHAT LIST */}
         <div className="chat-list">
           {chats.length === 0 ? (
             <p className="empty-state">No messages yet. Start a chat!</p>
           ) : (
-            chats.map(chat => (
-              <ChatRow key={chat.id} chat={chat} onClick={() => navigate(`/messages/${chat.id}`)} />
+            chats.map((chat) => (
+              <ChatRow 
+                key={chat.id} 
+                chat={chat} 
+                onClick={() => navigate(`/messages/${chat.id}`)} 
+              />
             ))
           )}
         </div>
       </div>
 
+      {/* =========================
+          NEW CHAT MODAL
+          ========================= */}
       {isModalOpen && (
-        <div className="modal-overlay" onClick={() => setIsModalOpen(false)}>
-          <div className="modal-content" onClick={e => e.stopPropagation()}>
+        <div
+          className="modal-overlay"
+          onClick={() => setIsModalOpen(false)}
+        >
+          <div
+            className="modal-content"
+            onClick={(event) => event.stopPropagation()}
+          >
             <h2>Start a Chat</h2>
-            
-            <form onSubmit={handleAddFriend} className="add-friend-form">
-              <input 
-                type="email" 
-                placeholder="Add friend by university email..." 
+
+            {/* ADD FRIEND */}
+            <form className="add-friend-form" onSubmit={handleAddFriend}>
+              <input
+                type="email"
+                placeholder="Add friend by university email..."
                 value={friendEmail}
-                onChange={e => setFriendEmail(e.target.value)}
+                onChange={(event) => {
+                  setFriendEmail(event.target.value);
+                  setModalError("");
+                }}
                 required
               />
-              <button type="submit">Add</button>
+              <button type="submit" disabled={addingFriend}>
+                {addingFriend ? "Adding..." : "Add"}
+              </button>
             </form>
+
             {modalError && <p className="error-message">{modalError}</p>}
 
+            {/* FRIEND LIST */}
             <div className="friends-list">
               <h3>Your Friends</h3>
+
               {friends.length === 0 ? (
-                <p className="empty-state">Add a friend above to start chatting.</p>
+                <p className="empty-state">
+                  Add a friend above to start chatting.
+                </p>
               ) : (
-                friends.map(friend => (
+                friends.map((friend) => (
                   <div key={friend.id} className="friend-row">
-                    <span>{friend.name}</span>
-                    <button onClick={() => startChat(friend.id)}>Chat</button>
+                    <span>{friend.name || "USYD Student"}</span>
+                    <button
+                      type="button"
+                      onClick={() => startChat(friend.id)}
+                    >
+                      Chat
+                    </button>
                   </div>
                 ))
               )}

@@ -1,20 +1,18 @@
-// src/pages/LandingPage.jsx
-
-import { Check, Filter, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
-
+import { Check, Filter, X } from "lucide-react";
 import {
+  arrayUnion,
   collection,
   doc,
   getDoc,
   getDocs,
   serverTimestamp,
   setDoc,
+  writeBatch,
 } from "firebase/firestore";
 
 import { auth, db } from "../firebase";
-
 import "./LandingPage.css";
 
 function shuffleProfiles(profiles) {
@@ -146,6 +144,47 @@ function LandingPage() {
   }
 
   // -----------------------------------------
+  // CHECK FOR MUTUAL MATCH
+  // -----------------------------------------
+
+  async function checkForMatch(currentUserId, otherUserId) {
+    try {
+      // Reverse swipe: other user -> current user
+      const reverseSwipeId = `${otherUserId}_${currentUserId}`;
+      const reverseSwipeSnapshot = await getDoc(doc(db, "swipes", reverseSwipeId));
+
+      if (!reverseSwipeSnapshot.exists()) {
+        return false;
+      }
+
+      const reverseSwipe = reverseSwipeSnapshot.data();
+      if (reverseSwipe.decision !== "interested") {
+        return false;
+      }
+
+      // Match found! Add each user to the other's friends array.
+      const batch = writeBatch(db);
+      const currentUserRef = doc(db, "users", currentUserId);
+      const otherUserRef = doc(db, "users", otherUserId);
+
+      batch.update(currentUserRef, {
+        friends: arrayUnion(otherUserId),
+      });
+
+      batch.update(otherUserRef, {
+        friends: arrayUnion(currentUserId),
+      });
+
+      await batch.commit();
+      console.log("Match created between:", currentUserId, otherUserId);
+      return true;
+    } catch (error) {
+      console.error("Error creating match:", error);
+      return false;
+    }
+  }
+
+  // -----------------------------------------
   // HANDLE X / TICK
   // -----------------------------------------
 
@@ -153,20 +192,30 @@ function LandingPage() {
     const user = auth.currentUser;
     if (!user || !currentProfile) return;
 
-    showNextProfile(); // Move immediately
+    const selectedProfile = currentProfile; // Preserve this profile before moving the UI forward
+    showNextProfile(); // Move immediately so discovery stays responsive.
 
     try {
-      const swipeId = `${user.uid}_${currentProfile.id}`;
+      const swipeId = `${user.uid}_${selectedProfile.id}`;
+
+      // Always save this user's decision.
       await setDoc(
         doc(db, "swipes", swipeId),
         {
           fromUserId: user.uid,
-          toUserId: currentProfile.id,
+          toUserId: selectedProfile.id,
           decision,
           updatedAt: serverTimestamp(),
         },
         { merge: true }
       );
+
+      // Passing does not need any reciprocal-match check.
+      if (decision !== "interested") return;
+
+      // Check whether the other person already liked this user.
+      await checkForMatch(user.uid, selectedProfile.id);
+
     } catch (error) {
       console.error("Error saving decision:", error);
     }

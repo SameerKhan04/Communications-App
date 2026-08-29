@@ -1,5 +1,3 @@
-// src/pages/New_signup.jsx
-
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { doc, setDoc } from "firebase/firestore";
 import { useState } from "react";
@@ -80,7 +78,7 @@ function New_signup() {
 
           <h1 className="brand-name">
             <span className="brand-white">CHUM</span>
-            <span className="brand-black">BUDDY</span>
+            <span className="brand-black">BUDDIES</span>
           </h1>
 
           <p className="brand-description">
@@ -153,25 +151,4 @@ function New_signup() {
               className="sign-in-button" 
               type="submit" 
               disabled={isSubmitting}
-              style={{ opacity: isSubmitting ? 0.7 : 1 }}
-            >
-              {isSubmitting ? "Creating account..." : "Sign up"}
-            </button>
-          </form>
-
-          {/* BACK TO LOGIN */}
-          <button
-            className="back-button"
-            type="button"
-            onClick={() => navigate("/login")}
-            disabled={isSubmitting}
-          >
-            ← Back to sign in
-          </button>
-        </div>
-      </section>
-    </main>
-  );
-}
-
-export default New_signup;
+              style={{ opacity
