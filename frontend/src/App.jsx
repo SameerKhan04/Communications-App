@@ -2,18 +2,16 @@ import { Navigate, Route, Routes } from "react-router";
 
 import AppLayout from "./layouts/AppLayout";
 
-import LoginPage from "./pages/LoginPage";
-import LandingPage from "./pages/LandingPage";
-import ProfilePage from "./pages/ProfilePage";
-import EditProfilePage from "./pages/EditProfilePage";
-import UserProfilePage from "./pages/UserProfilePage";
-import New_signup from "./pages/New_signup.jsx";
-
-// Don't forget the chat imports we just made!
-import MessagesPage from "./pages/MessagesPage";
-import ChatPage from "./pages/ChatPage";
-
 import "./App.css";
+
+import ChatPage from "./pages/ChatPage";
+import EditProfilePage from "./pages/EditProfilePage";
+import LandingPage from "./pages/LandingPage";
+import LoginPage from "./pages/LoginPage";
+import MessagesPage from "./pages/MessagesPage";
+import New_signup from "./pages/New_signup.jsx";
+import ProfilePage from "./pages/ProfilePage";
+import UserProfilePage from "./pages/UserProfilePage";
 
 function App() {
   return (
