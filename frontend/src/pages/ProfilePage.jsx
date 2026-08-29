@@ -48,14 +48,6 @@ function ProfilePage() {
 
   return (
     <main className="public-profile-page">
-      <header className="public-profile-navbar">
-        <div className="public-profile-logo">
-          <span>CHUM</span>
-          <strong>BUDDY</strong>
-        </div>
-
-        <span>My Profile</span>
-      </header>
 
       <div className="public-profile-container">
         <section className="public-profile-card">
