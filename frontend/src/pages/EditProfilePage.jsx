@@ -177,19 +177,11 @@ function EditProfilePage() {
 
   return (
     <main className="profile-page">
-      <header className="profile-navbar">
-        <div className="profile-logo">
-          <span>CHUM</span>
-          <strong>BUDDY</strong>
-        </div>
-        <span className="profile-nav-title">Edit Profile</span>
-      </header>
-
       <div className="profile-container">
         <section className="profile-heading">
           <p className="profile-eyebrow">EDIT YOUR PROFILE</p>
           <h1>Tell people who you are.</h1>
-          <p>Update how you appear to other students on Chum Buddy.</p>
+          <p>Update how you appear to other students on Chum Buddies.</p>
         </section>
 
         <form className="profile-form" onSubmit={handleSave}>

@@ -1,4 +1,8 @@
-import { useEffect, useState } from "react";
+import {
+  useEffect,
+  useState,
+} from "react";
+
 import {
   Navigate,
   Outlet,
@@ -8,13 +12,21 @@ import {
   onAuthStateChanged,
 } from "firebase/auth";
 
-import { auth } from "../firebase";
+import {
+  auth,
+} from "../firebase";
+
 import AppNavbar from "../components/AppNavbar";
+
+import "./AppLayout.css";
 
 
 function AppLayout() {
-  const [user, setUser] = useState(auth.currentUser);
-  const [authLoading, setAuthLoading] = useState(true);
+  const [user, setUser] =
+    useState(auth.currentUser);
+
+  const [authLoading, setAuthLoading] =
+    useState(true);
 
 
   // -----------------------------------------
@@ -22,20 +34,22 @@ function AppLayout() {
   // -----------------------------------------
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(
-      auth,
-      (currentUser) => {
-        setUser(currentUser);
-        setAuthLoading(false);
-      }
-    );
+    const unsubscribe =
+      onAuthStateChanged(
+        auth,
+        (currentUser) => {
+          setUser(currentUser);
+          setAuthLoading(false);
+        }
+      );
+
 
     return () => unsubscribe();
   }, []);
 
 
   // -----------------------------------------
-  // WAIT FOR FIREBASE
+  // WAIT FOR FIREBASE AUTH
   // -----------------------------------------
 
   if (authLoading) {
@@ -44,7 +58,7 @@ function AppLayout() {
 
 
   // -----------------------------------------
-  // NOT LOGGED IN
+  // NOT SIGNED IN
   // -----------------------------------------
 
   if (!user) {
@@ -62,11 +76,22 @@ function AppLayout() {
   // -----------------------------------------
 
   return (
-    <>
+    <div className="app-layout">
+
       <AppNavbar />
 
-      <Outlet />
-    </>
+
+      <div
+        className="app-background-mascot"
+        aria-hidden="true"
+      />
+
+
+      <div className="app-layout-content">
+        <Outlet />
+      </div>
+
+    </div>
   );
 }
 

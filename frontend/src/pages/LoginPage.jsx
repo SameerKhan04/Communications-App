@@ -1,6 +1,11 @@
+// src/pages/LoginPage.jsx
+
+import { signInWithEmailAndPassword } from "firebase/auth";
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import logo from "../assets/chum_buddy_colour.png";
+import { auth } from "../firebase";
+
 import "./LoginPage.css";
 
 function LoginPage() {
@@ -10,42 +15,60 @@ function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
 
-  const handleSubmit = (event) => {
+  // -----------------------------------------
+  // SIGN IN
+  // -----------------------------------------
+
+  async function handleSignIn(event) {
     event.preventDefault();
+
+    const validUsydEmail = email
+      .toLowerCase()
+      .endsWith("@uni.sydney.edu.au");
+
+    if (!validUsydEmail) {
+      setError("Please enter a valid University of Sydney email.");
+      return;
+    }
+
+    if (password.length < 6) {
+      setError("Password must contain at least 6 characters.");
+      return;
+    }
+
     setError("");
 
-    // USYD email validation
-    if (!email.toLowerCase().endsWith("@sydney.edu.au")) {
-      setError("Please use your University of Sydney email address.");
-      return;
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+      // Go to discovery page
+      navigate("/");
+    } catch (err) {
+      setError(err.message);
     }
+  }
 
-    if (!password) {
-      setError("Please enter your password.");
-      return;
-    }
+  // -----------------------------------------
+  // SIGN UP
+  // -----------------------------------------
 
-    // TODO: Replace this with your real authentication logic.
-    console.log("Logging in:", email);
-
-    // Temporary navigation so the page works.
-    navigate("/home");
-  };
-
-  const handleSignUp = () => {
+  function handleSignUp() {
+    setError("");
     navigate("/signup");
-  };
+  }
+
+  // -----------------------------------------
+  // PAGE
+  // -----------------------------------------
 
   return (
     <main className="login-page">
-      {/* Decorative background */}
       <div className="background-decoration decoration-one" />
       <div className="background-decoration decoration-two" />
 
       <div className="login-container">
-        {/* Branding */}
+        {/* BRAND */}
         <section className="brand-section">
-          <p className="brand-label">COMMUNICATIONS APP</p>
+          <p className="brand-label">UNIVERSITY OF SYDNEY</p>
 
           <img
             className="brand-logo"
@@ -54,87 +77,82 @@ function LoginPage() {
           />
 
           <p className="brand-description">
-            Connect with your university community, find your people,
-            and make campus life a little more social.
+            Find your people.
+            <br />
+            Connect through what you care about.
           </p>
         </section>
 
-        {/* Login card */}
+        {/* LOGIN CARD */}
         <section className="login-card">
           <div className="card-heading">
             <p className="small-heading">WELCOME BACK</p>
-
             <h2>Sign in</h2>
-
-            <p>
-              Sign in with your University of Sydney account to continue.
-            </p>
+            <p>Connect with students across campus.</p>
           </div>
 
-          <form onSubmit={handleSubmit}>
-            {/* Email */}
+          {/* SIGN IN FORM */}
+          <form onSubmit={handleSignIn}>
             <div className="login-form-group">
-              <label htmlFor="email">USYD email</label>
+              <label htmlFor="email">University email</label>
 
               <input
                 id="email"
                 type="email"
+                placeholder="unikey@uni.sydney.edu.au"
                 value={email}
-                onChange={(event) => setEmail(event.target.value)}
-                placeholder="your.name@sydney.edu.au"
+                onChange={(event) => {
+                  setEmail(event.target.value);
+                  setError("");
+                }}
                 autoComplete="email"
+                required
               />
             </div>
 
-            {/* Password */}
             <div className="login-form-group">
               <label htmlFor="password">Password</label>
 
               <input
                 id="password"
                 type="password"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
                 placeholder="Enter your password"
+                value={password}
+                onChange={(event) => {
+                  setPassword(event.target.value);
+                  setError("");
+                }}
                 autoComplete="current-password"
+                required
               />
             </div>
 
-            {/* Error */}
-            {error && (
-              <p className="error-message" role="alert">
-                {error}
-              </p>
-            )}
+            {error && <p className="error-message">{error}</p>}
 
-            {/* Sign in */}
-            <button
-              type="submit"
-              className="sign-in-button"
-            >
-              Sign In
+            <button className="sign-in-button" type="submit">
+              Sign in
             </button>
-
-            {/* Divider */}
-            <div className="login-divider">
-              <span />
-              <p>OR</p>
-              <span />
-            </div>
-
-            {/* Sign up */}
-            <button
-              type="button"
-              className="sign-up-button"
-              onClick={handleSignUp}
-            >
-              Sign Up
-            </button>
-
-            <p className="account-note">
-              Only University of Sydney students can create an account.
-            </p>
           </form>
+
+          {/* DIVIDER */}
+          <div className="login-divider">
+            <span />
+            <p>OR</p>
+            <span />
+          </div>
+
+          {/* SIGN UP */}
+          <button
+            className="sign-up-button"
+            type="button"
+            onClick={handleSignUp}
+          >
+            Sign up
+          </button>
+
+          <p className="account-note">
+            New to Chum Buddies? Create an account using your University of Sydney email.
+          </p>
         </section>
       </div>
     </main>

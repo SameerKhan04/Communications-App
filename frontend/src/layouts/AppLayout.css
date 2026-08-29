@@ -1,0 +1,281 @@
+/* =========================
+   AUTHENTICATED APP LAYOUT
+   ========================= */
+
+.app-layout {
+  position: relative;
+
+  width: 100%;
+  min-height: 100vh;
+
+  overflow-x: hidden;
+}
+
+
+/* =========================
+   NAVBAR
+   ========================= */
+
+.app-layout .app-navbar {
+  position: relative;
+  z-index: 100;
+}
+
+
+/* =========================
+   PAGE CONTENT
+   ========================= */
+
+.app-layout-content {
+  position: relative;
+
+  width: 100%;
+}
+
+
+/* =========================
+   DISABLE OLD GLOBAL IMAGE
+   ========================= */
+
+.app-background-mascot {
+  display: none;
+}
+
+
+/* =========================
+   PATTERNED PAGES
+   ========================= */
+
+.landing-page,
+.public-profile-page,
+.profile-page,
+.friends-page,
+.messages-page,
+.chat-page {
+  position: relative;
+
+  isolation: isolate;
+}
+
+
+/* =========================
+   REAL WEBSITE COMPONENTS
+
+   Everything inside the pages
+   sits ABOVE the background
+   mascot pattern.
+   ========================= */
+
+.landing-page > *,
+.public-profile-page > *,
+.profile-page > *,
+.friends-page > *,
+.messages-page > *,
+.chat-page > * {
+  position: relative;
+  z-index: 2;
+}
+
+
+/* =========================
+   CHUM BUDDIES CHECKERBOARD
+   PATTERN
+
+   Pattern:
+
+   PNG   blank   PNG   blank
+
+   blank PNG     blank PNG
+
+   PNG   blank   PNG   blank
+
+   Each tile is 190px × 190px.
+   ========================= */
+
+.landing-page::before,
+.public-profile-page::before,
+.profile-page::before,
+.friends-page::before,
+.messages-page::before,
+.chat-page::before {
+  content: "";
+
+  position: absolute;
+  z-index: 0;
+
+  right: 0;
+  bottom: 0;
+  left: 0;
+
+  /*
+    Repeat the mascot once
+    every 190px.
+  */
+
+  background-image:
+    url("../assets/chum-buddy-bw.png");
+
+  background-repeat: repeat;
+
+  background-size:
+    190px 190px;
+
+  background-position:
+    0 0;
+
+
+  /*
+    CHECKERBOARD MASK
+
+    One 190px tile visible,
+    the next 190px tile blank.
+
+    The next row reverses it.
+
+    Entire checkerboard cycle:
+    380px × 380px.
+  */
+
+  -webkit-mask-image:
+    conic-gradient(
+      from 90deg,
+      #000 25%,
+      transparent 0 50%,
+      #000 0 75%,
+      transparent 0
+    );
+
+  -webkit-mask-size:
+    380px 380px;
+
+  -webkit-mask-repeat:
+    repeat;
+
+
+  mask-image:
+    conic-gradient(
+      from 90deg,
+      #000 25%,
+      transparent 0 50%,
+      #000 0 75%,
+      transparent 0
+    );
+
+  mask-size:
+    380px 380px;
+
+  mask-repeat:
+    repeat;
+
+
+  /*
+    Pattern visibility
+  */
+
+  opacity: 0.4;
+
+  pointer-events: none;
+  user-select: none;
+}
+
+
+/* =========================
+   REMOVE OLD SECOND PATTERN
+   LAYER
+   ========================= */
+
+.landing-page::after,
+.public-profile-page::after,
+.profile-page::after,
+.friends-page::after,
+.messages-page::after,
+.chat-page::after {
+  content: none;
+}
+
+
+/* =========================
+   LANDING PAGE
+
+   Pattern begins where the
+   grey section starts.
+   ========================= */
+
+.landing-page::before {
+  top: 100px;
+}
+
+
+/* =========================
+   PROFILE / EDIT PROFILE
+
+   Pattern begins where the
+   grey section starts.
+   ========================= */
+
+.profile-page::before {
+  top: 72px;
+}
+
+
+/* =========================
+   FULL GREY PAGES
+   ========================= */
+
+.public-profile-page::before,
+.friends-page::before,
+.messages-page::before,
+.chat-page::before {
+  top: 0;
+}
+
+
+/* =========================
+   MODALS
+
+   Always remain above
+   everything else.
+   ========================= */
+
+.modal-overlay {
+  position: fixed;
+  z-index: 200;
+}
+
+
+/* =========================
+   MOBILE
+   ========================= */
+
+@media (max-width: 700px) {
+
+  .landing-page::before,
+  .public-profile-page::before,
+  .profile-page::before,
+  .friends-page::before,
+  .messages-page::before,
+  .chat-page::before {
+
+    /*
+      Smaller mascot tile:
+      140px image
+      140px blank
+
+      Complete checkerboard cycle:
+      280px × 280px.
+    */
+
+    background-size:
+      140px 140px;
+
+
+    -webkit-mask-size:
+      280px 280px;
+
+    mask-size:
+      280px 280px;
+
+
+    opacity: 0.02;
+  }
+}
