@@ -9,6 +9,7 @@ import EditProfilePage from "./pages/EditProfilePage";
 import Friends from "./pages/Friends";
 import LandingPage from "./pages/LandingPage";
 import LoginPage from "./pages/LoginPage";
+import MatchesPage from "./pages/MatchesPages";
 import MessagesPage from "./pages/MessagesPage";
 import New_signup from "./pages/New_signup.jsx";
 import ProfilePage from "./pages/ProfilePage";
@@ -28,6 +29,7 @@ function App() {
         <Route path="/profile/edit" element={<EditProfilePage />} />
         <Route path="/users/:userId" element={<UserProfilePage />} />
         <Route path="/friends" element={<Friends />} />
+        <Route path="/matches" element={<MatchesPage />} />
         
         {/* Your Messaging Routes */}
         <Route path="/messages" element={<MessagesPage />} />
