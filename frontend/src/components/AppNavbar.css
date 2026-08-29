@@ -1,0 +1,161 @@
+/* =========================
+   APP NAVBAR
+   ========================= */
+
+.app-navbar {
+  width: 100%;
+  height: 72px;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  padding: 0 6%;
+
+  background: var(--white);
+
+  border-top: 5px solid var(--ochre);
+  border-bottom: 1px solid #d7d8da;
+}
+
+
+/* =========================
+   LOGO
+   ========================= */
+
+.app-navbar-logo {
+  display: flex;
+  align-items: center;
+
+  color: inherit;
+
+  font-size: 20px;
+  font-weight: 900;
+
+  letter-spacing: -0.05em;
+
+  text-decoration: none;
+}
+
+.app-navbar-logo > span {
+  margin-right: 5px;
+
+  color: var(--black);
+}
+
+.app-navbar-logo strong {
+  padding: 4px 7px;
+
+  border-radius: 3px;
+
+  background: var(--black);
+  color: var(--white);
+}
+
+
+/* =========================
+   NAVIGATION LINKS
+   ========================= */
+
+.app-navbar-links {
+  display: flex;
+  align-items: center;
+
+  gap: 8px;
+}
+
+.app-navbar-link {
+  padding: 9px 13px;
+
+  border-radius: 9px;
+
+  color: #77777a;
+
+  font-size: 13px;
+  font-weight: 800;
+
+  text-decoration: none;
+
+  transition:
+    background 0.15s ease,
+    color 0.15s ease,
+    transform 0.15s ease;
+}
+
+.app-navbar-link:hover {
+  transform: translateY(-1px);
+
+  background: var(--light-grey);
+  color: var(--black);
+}
+
+.app-navbar-link.active {
+  background: var(--black);
+  color: var(--white);
+}
+
+
+/* =========================
+   RESPONSIVE
+   ========================= */
+
+@media (max-width: 650px) {
+  .app-navbar {
+    padding: 0 4%;
+  }
+
+  .app-navbar-logo {
+    font-size: 17px;
+  }
+
+  .app-navbar-links {
+    gap: 2px;
+  }
+
+  .app-navbar-link {
+    padding: 8px 9px;
+
+    font-size: 12px;
+  }
+}
+
+/* =========================
+   SIGN OUT
+   ========================= */
+
+.app-navbar-signout {
+  margin-left: 8px;
+  padding: 9px 13px;
+
+  border: 1px solid var(--ochre);
+  border-radius: 9px;
+
+  background: var(--white);
+  color: var(--ochre);
+
+  font-size: 13px;
+  font-weight: 800;
+
+  cursor: pointer;
+
+  transition:
+    background 0.15s ease,
+    color 0.15s ease,
+    transform 0.15s ease;
+}
+
+.app-navbar-signout:hover {
+  transform: translateY(-1px);
+
+  background: var(--ochre);
+  color: var(--white);
+}
+
+@media (max-width: 650px) {
+  .app-navbar-signout {
+    margin-left: 2px;
+    padding: 8px 9px;
+
+    font-size: 12px;
+  }
+}
