@@ -17,7 +17,7 @@ pipeline {
             steps {
                 script {
                     // Jenkins calls Docker CLI to build the app container
-                    sh "docker build -t ${TEST_IMAGE} ."
+                    sh "docker build -f backend/Dockerfile -t ${TEST_IMAGE} backend/"
                 }
             }
         }
