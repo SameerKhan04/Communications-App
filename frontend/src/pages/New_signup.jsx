@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
 import "./New_signup.css";
 import PasswordInput from "../PasswordInput.jsx";
+import { useNavigate } from "react-router";
+import {createUserWithEmailAndPassword, signInWithEmailAndPassword} from "firebase/auth";
+import {auth} from "../firebase.js";
 
 const INTERESTS = [
   "Gaming",
@@ -35,23 +38,42 @@ function New_signup() {
   const [loginEmail, setLoginEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const navigate = useNavigate();
+
 
   // --------------------------------------------------
   // SIGN UP
   // --------------------------------------------------
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     // Prevent standard browser page reload
     e.preventDefault();
     setError('');
-
     // Handle authentication logic here
-    console.log("Signing up with:", { email, password });
-  };
+    console.log("Signing up with:", {email, password});
 
-  function handleSignUp() {
+    const validUsydEmail = email
+        .toLowerCase()
+        .endsWith("@uni.sydney.edu.au");
+
+    if (!validUsydEmail) {
+      setError("Please enter a valid University of Sydney email.");
+      return;
+    }
+
+    if (password.length < 6) {
+      setError("Password must contain at least 6 characters.");
+      return;
+    }
+
     setError("");
-    setPage("signup");
-  }
+
+    try {
+      await createUserWithEmailAndPassword(auth, email, password);
+      navigate("/profile");
+    } catch (err) {
+      setError(err.message);
+    }
+  };
 
   // --------------------------------------------------
   // REGISTRATION PAGE
@@ -113,10 +135,11 @@ function New_signup() {
                     placeholder="Create a strong password"
                   />
                 </div>
+                {error && <div className="error-message" style={{ color: 'red', marginBottom: '10px' }}>{error}</div>}
 
                 {/* Submit Button */}
                 <button type="submit" className="signup-submit-btn">
-                  Sign Up
+                  Create Account
                 </button>
               </form>
             </div>

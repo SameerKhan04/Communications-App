@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import './pages/New_signup.css'; // import your CSS file
 
-function PasswordInput({ value, onChange, placeholder = "Enter your password" }) {
+function PasswordInput({ id, value, onChange, placeholder = "Enter your password" }) {
   const [showPassword, setShowPassword] = useState(false);
 
   const togglePasswordVisibility = () => {
@@ -11,6 +11,7 @@ function PasswordInput({ value, onChange, placeholder = "Enter your password" })
   return (
     <div className="password-field-container">
       <input
+        id={id} /* <-- Pass id here so label linking and browser validation work */
         type={showPassword ? "text" : "password"}
         className="signup-input password-input"
         value={value}
