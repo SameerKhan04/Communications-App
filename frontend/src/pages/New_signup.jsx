@@ -1,155 +1,307 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { useNavigate } from "react-router";
+import { createUserWithEmailAndPassword } from "firebase/auth";
+import { doc, setDoc } from "firebase/firestore";
+import { auth, db } from "../firebase";
+
 import "./New_signup.css";
 import PasswordInput from "../PasswordInput.jsx";
 
 const INTERESTS = [
-  "Gaming",
-  "Music",
-  "Sport",
-  "Art & Design",
-  "Technology",
-  "Movies",
-  "Books",
-  "Food",
-  "Travel",
-  "Photography",
-  "Anime",
-  "Fitness",
-  "Fashion",
-  "Coffee",
-  "Volunteering",
-  "Study",
+  "Gaming", "Music", "Sport", "Art & Design", "Technology",
+  "Movies", "Books", "Food", "Travel", "Photography",
+  "Anime", "Fitness", "Fashion", "Coffee", "Volunteering", "Study",
 ];
 
-
 function New_signup() {
+  const navigate = useNavigate();
+
   const [page, setPage] = useState("signup");
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [phone, setPhone] = useState("");
   const [username, setUsername] = useState("");
 
-
   const [selectedInterests, setSelectedInterests] = useState([]);
-
-
-  const [loginEmail, setLoginEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [error, setError] = useState("");
 
   // --------------------------------------------------
-  // SIGN UP
+  // STEP 1: VALIDATE SIGNUP DETAILS
   // --------------------------------------------------
-  const handleSubmit = (e) => {
-    // Prevent standard browser page reload
+  const handleRegistrationSubmit = (e) => {
     e.preventDefault();
-    setError('');
 
-    // Handle authentication logic here
-    console.log("Signing up with:", { email, password });
+    const validUsydEmail = email.toLowerCase().endsWith("@uni.sydney.edu.au");
+
+    if (!validUsydEmail) {
+      setError("Please enter a valid University of Sydney email.");
+      return;
+    }
+
+    if (password.length < 6) {
+      setError("Password must contain at least 6 characters.");
+      return;
+    }
+
+    setError("");
+    setPage("interests");
   };
 
-  function handleSignUp() {
+  // --------------------------------------------------
+  // STEP 2: TOGGLE INTERESTS
+  // --------------------------------------------------
+  const toggleInterest = (interest) => {
+    if (selectedInterests.includes(interest)) {
+      setSelectedInterests(selectedInterests.filter((i) => i !== interest));
+    } else {
+      setSelectedInterests([...selectedInterests, interest]);
+    }
+  };
+
+  // --------------------------------------------------
+  // STEP 3: FINISH & SAVE TO FIREBASE
+  // --------------------------------------------------
+  const finishRegistration = async () => {
     setError("");
-    setPage("signup");
-  }
+
+    try {
+      // 1. Create auth user
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+
+      // 2. Save profile to Firestore (CRITICAL: includes email for messaging feature!)
+      await setDoc(doc(db, "users", user.uid), {
+        email: email.toLowerCase(), 
+        name: username || email.split("@")[0],
+        phone: phone,
+        pronouns: "",
+        bio: "",
+        degree: "",
+        major: "",
+        second_major_minor: "",
+        languages: ["English"],
+        interests: selectedInterests,
+        societies: [],
+        profilePicture: null,
+      });
+
+      // 3. Move to success screen
+      setPage("success");
+
+      // 4. Redirect to the app after 2 seconds
+      setTimeout(() => {
+        navigate("/profile");
+      }, 2000);
+
+    } catch (err) {
+      setError(err.message);
+    }
+  };
 
   // --------------------------------------------------
-  // REGISTRATION PAGE
+  // UI: REGISTRATION PAGE (Step 1)
   // --------------------------------------------------
-
-
   if (page === "signup") {
     return (
-      <main className="login-page">
-        <div className="background-decoration decoration-one" />
-        <div className="background-decoration decoration-two" />
+      <main className="signup-page">
+        <section className="signup-card">
+          <div className="signup-progress">
+            <span className="progress-dot active" />
+            <span className="progress-line" />
+            <span className="progress-dot" />
+          </div>
 
-
-        <section className="login-container">
-          <div className="brand-section">
-            <p className="brand-label">UNIVERSITY OF SYDNEY</p>
-
-
-            <h1 className="brand-name">
-              <span className="brand-white">CHUM</span>
-              <span className="brand-black">BUCKET</span>
-            </h1>
-
-
-            <p className="brand-description">
-              Find your people.
-              <br />
-              Connect through what you care about.
+          <div className="signup-heading">
+            <p className="small-heading">LET'S GET STARTED</p>
+            <h1>Create your account</h1>
+            <p>
+              A few details and you'll be ready to meet your new
+              university chums.
             </p>
           </div>
 
-
-          <div className="login-card">
-            <div className="card-heading">
-              <h2>Sign Up</h2>
-              <p>Connect with students across campus.</p>
-              <form onSubmit={handleSubmit} className="signup-form">
-                {/* Email Field */}
-                <div className="form-group">
-                  <label htmlFor="email">Email</label>
-                  <input
-                    id="email"
-                    type="email"
-                    className="signup-input"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="name@example.com"
-                    required
-                  />
-                </div>
-
-                {/* Password Field */}
-                <div className="form-group">
-                  <label htmlFor="password">Password</label>
-                  <PasswordInput
-                    id="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Create a strong password"
-                  />
-                </div>
-
-                {/* Submit Button */}
-                <button type="submit" className="signup-submit-btn">
-                  Sign Up
-                </button>
-              </form>
+          <form onSubmit={handleRegistrationSubmit}>
+            <div className="form-group">
+              <label htmlFor="signup-email">University email</label>
+              <input
+                id="signup-email"
+                type="email"
+                placeholder="unikey@uni.sydney.edu.au"
+                value={email}
+                onChange={(event) => {
+                  setEmail(event.target.value);
+                  setError("");
+                }}
+                required
+              />
             </div>
-            <p className="account-note">
-              New to Chum Bucket? Create an account using your
-              University of Sydney email.
+
+            <div className="form-group">
+              <label htmlFor="signup-password">Password</label>
+              <PasswordInput
+                id="signup-password"
+                value={password}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  setError("");
+                }}
+                placeholder="Create a strong password"
+              />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="signup-phone">Phone number</label>
+              <input
+                id="signup-phone"
+                type="tel"
+                placeholder="04XX XXX XXX"
+                value={phone}
+                onChange={(event) => {
+                  setPhone(event.target.value);
+                  setError("");
+                }}
+                required
+              />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="signup-username">Username</label>
+              <input
+                id="signup-username"
+                type="text"
+                placeholder="Choose a username"
+                value={username}
+                onChange={(event) => {
+                  setUsername(event.target.value);
+                  setError("");
+                }}
+                minLength={3}
+                required
+              />
+            </div>
+
+            {error && <p className="error-message">{error}</p>}
+
+            <button className="primary-button" type="submit">
+              Continue
+            </button>
+          </form>
+
+          <button
+            className="back-button"
+            type="button"
+            onClick={() => navigate("/login")}
+          >
+            ← Back to sign in
+          </button>
+        </section>
+      </main>
+    );
+  }
+
+  // --------------------------------------------------
+  // UI: INTEREST SELECTION (Step 2)
+  // --------------------------------------------------
+  if (page === "interests") {
+    return (
+      <main className="interests-page">
+        <section className="interests-card">
+          <div className="signup-progress">
+            <span className="progress-dot completed">✓</span>
+            <span className="progress-line completed" />
+            <span className="progress-dot active" />
+          </div>
+
+          <div className="signup-heading">
+            <p className="small-heading">MAKE IT YOURS</p>
+            <h1>What are you into?</h1>
+            <p>
+              Pick a few things you enjoy. We'll use these to help
+              you find people with similar interests.
             </p>
+          </div>
+
+          <div className="interest-grid">
+            {INTERESTS.map((interest) => {
+              const selected = selectedInterests.includes(interest);
+              return (
+                <button
+                  key={interest}
+                  type="button"
+                  className={`interest-button ${selected ? "selected" : ""}`}
+                  onClick={() => toggleInterest(interest)}
+                >
+                  {selected && <span className="interest-check">✓</span>}
+                  {interest}
+                </button>
+              );
+            })}
+          </div>
+
+          <p className="interest-count">
+            {selectedInterests.length}{" "}
+            {selectedInterests.length === 1 ? "interest" : "interests"} selected
+          </p>
+
+          {error && <p className="error-message">{error}</p>}
+
+          <button
+            className="primary-button"
+            type="button"
+            onClick={finishRegistration}
+          >
+            Finish
+          </button>
+
+          <button
+            className="back-button"
+            type="button"
+            onClick={() => setPage("signup")}
+          >
+            ← Back
+          </button>
+        </section>
+      </main>
+    );
+  }
+
+  // --------------------------------------------------
+  // UI: SUCCESS MESSAGE (Step 3)
+  // --------------------------------------------------
+  if (page === "success") {
+    return (
+      <main className="success-page">
+        <section className="success-card">
+          <div className="success-icon">✓</div>
+          <p className="small-heading">WELCOME TO CHUM BUDDY</p>
+          <h1>
+            Hey, you're all
+            <br />
+            ready to go.
+          </h1>
+          <p>Hope you find who you're looking for!</p>
+          <div className="success-loader">
+            <span />
           </div>
         </section>
       </main>
     );
   }
 
-
   // --------------------------------------------------
-  // MAIN PAGE
+  // DEFAULT / FALLBACK PAGE
   // --------------------------------------------------
-
-
   return (
     <main className="home-page">
       <header className="home-header">
         <div>
-          <p className="home-label">CHUM BUCKET</p>
+          <p className="home-label">CHUM BUDDY</p>
           <h1>Hey, {username || "Chum"}!</h1>
         </div>
-
-
         <div className="profile-circle">
           {(username || "C").charAt(0).toUpperCase()}
         </div>
       </header>
-
 
       <section className="home-content">
         <div className="home-welcome">
@@ -160,7 +312,6 @@ function New_signup() {
             university feel a little more like home.
           </p>
         </div>
-
 
         <div className="home-placeholder">
           <div className="placeholder-icon">✦</div>
@@ -174,6 +325,5 @@ function New_signup() {
     </main>
   );
 }
-
 
 export default New_signup;

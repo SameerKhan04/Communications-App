@@ -1,10 +1,9 @@
 // src/pages/LoginPage.jsx
 
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from "firebase/auth";
-import { doc, setDoc } from "firebase/firestore";
+import { signInWithEmailAndPassword } from "firebase/auth";
 import { useState } from "react";
 import { useNavigate } from "react-router";
-import { auth, db } from "../firebase";
+import { auth } from "../firebase";
 
 import "./LoginPage.css";
 
@@ -14,6 +13,10 @@ function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+
+  // -----------------------------------------
+  // SIGN IN
+  // -----------------------------------------
 
   async function handleSignIn(event) {
     event.preventDefault();
@@ -36,18 +39,26 @@ function LoginPage() {
 
     try {
       await signInWithEmailAndPassword(auth, email, password);
-      navigate("/profile");
+      // Go to discovery page
+      navigate("/");
     } catch (err) {
       setError(err.message);
     }
   }
 
-  async function handleSignUp() {
-    setError("");
+  // -----------------------------------------
+  // SIGN UP
+  // -----------------------------------------
 
-    // Signup page will be connected later.
+  function handleSignUp() {
+    setError("");
+    // Redirect to the dedicated signup page your team made
     navigate("/signup");
   }
+
+  // -----------------------------------------
+  // PAGE
+  // -----------------------------------------
 
   return (
     <main className="login-page">
@@ -55,12 +66,13 @@ function LoginPage() {
       <div className="background-decoration decoration-two" />
 
       <section className="login-container">
+        {/* BRAND */}
         <div className="brand-section">
           <p className="brand-label">UNIVERSITY OF SYDNEY</p>
 
           <h1 className="brand-name">
             <span className="brand-white">CHUM</span>
-            <span className="brand-black">BUCKET</span>
+            <span className="brand-black">BUDDY</span>
           </h1>
 
           <p className="brand-description">
@@ -70,6 +82,7 @@ function LoginPage() {
           </p>
         </div>
 
+        {/* LOGIN CARD */}
         <div className="login-card">
           <div className="card-heading">
             <p className="small-heading">WELCOME BACK</p>
@@ -77,6 +90,7 @@ function LoginPage() {
             <p>Connect with students across campus.</p>
           </div>
 
+          {/* SIGN IN FORM */}
           <form onSubmit={handleSignIn}>
             <div className="login-form-group">
               <label htmlFor="email">University email</label>
@@ -119,12 +133,14 @@ function LoginPage() {
             </button>
           </form>
 
+          {/* DIVIDER */}
           <div className="login-divider">
             <span />
             <p>OR</p>
             <span />
           </div>
 
+          {/* SIGN UP */}
           <button
             className="sign-up-button"
             type="button"
@@ -134,7 +150,7 @@ function LoginPage() {
           </button>
 
           <p className="account-note">
-            New to Chum Bucket? Create an account using your University of Sydney email.
+            New to Chum Buddy? Create an account using your University of Sydney email.
           </p>
         </div>
       </section>
