@@ -8,6 +8,8 @@ import LoginPage from "./pages/LoginPage";
 import ProfilePage from "./pages/ProfilePage";
 import EditProfilePage from "./pages/EditProfilePage";
 import UserProfilePage from "./pages/UserProfilePage";
+import Friends from "./pages/Friends";
+
 import "./App.css";
 
 function App() {
@@ -39,6 +41,12 @@ function App() {
       <Route
         path="/users/:userId"
         element={<UserProfilePage />}
+      />
+
+      {/* Friends */}
+      <Route
+        path="/friends"
+        element={<Friends />}
       />
 
       <Route

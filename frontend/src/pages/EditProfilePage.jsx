@@ -65,7 +65,7 @@ function EditProfilePage() {
     from your backend/database.
   */
   const savedProfileString = localStorage.getItem(
-    "chumBucketProfile",
+    "chumBuddyProfile",
   );
 
   let savedProfile = DEFAULT_PROFILE;
@@ -315,7 +315,7 @@ function EditProfilePage() {
       to your backend/database.
     */
     localStorage.setItem(
-      "chumBucketProfile",
+      "chumBuddyProfile",
       JSON.stringify(profile),
     );
 
@@ -335,7 +335,7 @@ function EditProfilePage() {
       <header className="profile-navbar">
         <div className="profile-logo">
           <span>CHUM</span>
-          <strong>BUCKET</strong>
+          <strong>BUDDY</strong>
         </div>
 
         <span className="profile-nav-title">
@@ -353,7 +353,7 @@ function EditProfilePage() {
 
           <p>
             Update how you appear to other students
-            on Chum Bucket.
+            on Chum Buddy.
           </p>
         </section>
 

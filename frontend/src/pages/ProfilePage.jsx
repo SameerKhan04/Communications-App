@@ -19,7 +19,7 @@ function ProfilePage() {
   const navigate = useNavigate();
 
   const savedProfile = localStorage.getItem(
-    "chumBucketProfile",
+    "chumBuddyProfile",
   );
 
   const profile = savedProfile
@@ -31,7 +31,7 @@ function ProfilePage() {
       <header className="public-profile-navbar">
         <div className="public-profile-logo">
           <span>CHUM</span>
-          <strong>BUCKET</strong>
+          <strong>BUDDY</strong>
         </div>
 
         <span>My Profile</span>

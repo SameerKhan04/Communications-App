@@ -59,7 +59,7 @@ function UserProfilePage() {
       <header className="public-profile-navbar">
         <div className="public-profile-logo">
           <span>CHUM</span>
-          <strong>BUCKET</strong>
+          <strong>BUDDY</strong>
         </div>
 
         <span>Profile</span>
