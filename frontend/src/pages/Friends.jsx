@@ -2,6 +2,7 @@ import { addDoc, collection, doc, getDoc, getDocs, query, serverTimestamp, where
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 
+import lionSearchIcon from "../assets/lionsearch.png";
 import { auth, db } from "../firebase";
 
 import "./Friends.css";
@@ -204,8 +205,20 @@ function Friends() {
         </header>
 
         {/* SEARCH */}
-        <div className="friends-search">
-          <span className="friends-search-icon">⌕</span>
+        <div className="friends-search" style={{ position: "relative", display: "flex", alignItems: "center" }}>
+          <img 
+            src={lionSearchIcon} 
+            alt="Search icon" 
+            style={{ 
+              position: "absolute", 
+              left: "14px", 
+              width: "22px", 
+              height: "22px", 
+              pointerEvents: "none",
+              objectFit: "contain",
+              opacity: 0.9
+            }} 
+          />
 
           <input
             type="search"
@@ -213,6 +226,7 @@ function Friends() {
             value={search}
             onChange={(event) => setSearch(event.target.value)}
             aria-label="Search friends"
+            style={{ paddingLeft: "48px", width: "100%" }}
           />
 
           {search && (
@@ -265,7 +279,7 @@ function Friends() {
                   </div>
                 </div>
 
-                {/* The Two New Buttons */}
+                {/* The Two Buttons */}
                 <div style={{ display: "flex", gap: "8px", width: "100%" }}>
                   <button
                     onClick={() => handleStartChat(friend.id)}
