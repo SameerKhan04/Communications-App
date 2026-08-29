@@ -99,7 +99,6 @@ function Friends() {
     }
 
     return friends.filter((friend) => {
-      // Using your friend's safer fallback checks
       const nameMatch = (friend.name || "")
         .toLowerCase()
         .includes(query);
@@ -180,7 +179,7 @@ function Friends() {
         {/* HEADER */}
         <header className="friends-header">
           <div>
-            <p className="friends-eyebrow">CHUM BUDDIES</p>
+            <p className="friends-eyebrow">CHUM BUDDY</p>
             <h1>Friends</h1>
             <p className="friends-subtitle">
               Your university chums, all in one place.

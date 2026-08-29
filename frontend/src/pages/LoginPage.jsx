@@ -3,6 +3,7 @@
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { useState } from "react";
 import { useNavigate } from "react-router";
+import logo from "../assets/chum_buddy_colour.png";
 import { auth } from "../firebase";
 
 import "./LoginPage.css";
@@ -52,7 +53,6 @@ function LoginPage() {
 
   function handleSignUp() {
     setError("");
-    // Redirect to the dedicated signup page your team made
     navigate("/signup");
   }
 
@@ -65,25 +65,26 @@ function LoginPage() {
       <div className="background-decoration decoration-one" />
       <div className="background-decoration decoration-two" />
 
-      <section className="login-container">
+      <div className="login-container">
         {/* BRAND */}
-        <div className="brand-section">
+        <section className="brand-section">
           <p className="brand-label">UNIVERSITY OF SYDNEY</p>
 
-          <h1 className="brand-name">
-            <span className="brand-white">CHUM</span>
-            <span className="brand-black">BUDDIES</span>
-          </h1>
+          <img
+            className="brand-logo"
+            src={logo}
+            alt="Chum Buddy"
+          />
 
           <p className="brand-description">
             Find your people.
             <br />
             Connect through what you care about.
           </p>
-        </div>
+        </section>
 
         {/* LOGIN CARD */}
-        <div className="login-card">
+        <section className="login-card">
           <div className="card-heading">
             <p className="small-heading">WELCOME BACK</p>
             <h2>Sign in</h2>
@@ -152,8 +153,8 @@ function LoginPage() {
           <p className="account-note">
             New to Chum Buddies? Create an account using your University of Sydney email.
           </p>
-        </div>
-      </section>
+        </section>
+      </div>
     </main>
   );
 }
