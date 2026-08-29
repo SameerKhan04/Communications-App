@@ -184,7 +184,7 @@ function App() {
 
             <h1 className="brand-name">
               <span className="brand-white">CHUM</span>
-              <span className="brand-black">BUCKET</span>
+              <span className="brand-black">BUDDY</span>
             </h1>
 
 
@@ -269,7 +269,7 @@ function App() {
 
 
             <p className="account-note">
-              New to Chum Bucket? Create an account using your
+              New to Chum Buddy? Create an account using your
               University of Sydney email.
             </p>
           </div>
@@ -474,7 +474,7 @@ function App() {
           <div className="success-icon">✓</div>
 
 
-          <p className="small-heading">WELCOME TO CHUM BUCKET</p>
+          <p className="small-heading">WELCOME TO CHUM BUDDY</p>
 
 
           <h1>
@@ -507,7 +507,7 @@ function App() {
     <main className="home-page">
       <header className="home-header">
         <div>
-          <p className="home-label">CHUM BUCKET</p>
+          <p className="home-label">CHUM BUDDY</p>
           <h1>Hey, {username || "Chum"}!</h1>
         </div>
 

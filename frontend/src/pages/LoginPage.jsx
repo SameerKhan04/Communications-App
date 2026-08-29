@@ -1,12 +1,22 @@
 // src/pages/LoginPage.jsx
 
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from "firebase/auth";
-import { doc, setDoc } from "firebase/firestore";
+import {
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+} from "firebase/auth";
+
+import {
+  doc,
+  setDoc,
+} from "firebase/firestore";
+
 import { useState } from "react";
 import { useNavigate } from "react-router";
+
 import { auth, db } from "../firebase";
 
 import "./LoginPage.css";
+
 
 function LoginPage() {
   const navigate = useNavigate();
@@ -14,6 +24,11 @@ function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+
+
+  // -----------------------------------------
+  // SIGN IN
+  // -----------------------------------------
 
   async function handleSignIn(event) {
     event.preventDefault();
@@ -23,24 +38,41 @@ function LoginPage() {
       .endsWith("@uni.sydney.edu.au");
 
     if (!validUsydEmail) {
-      setError("Please enter a valid University of Sydney email.");
+      setError(
+        "Please enter a valid University of Sydney email."
+      );
+
       return;
     }
 
     if (password.length < 6) {
-      setError("Password must contain at least 6 characters.");
+      setError(
+        "Password must contain at least 6 characters."
+      );
+
       return;
     }
 
     setError("");
 
     try {
-      await signInWithEmailAndPassword(auth, email, password);
-      navigate("/profile");
+      await signInWithEmailAndPassword(
+        auth,
+        email,
+        password
+      );
+
+      // Go to discovery page
+      navigate("/");
     } catch (err) {
       setError(err.message);
     }
   }
+
+
+  // -----------------------------------------
+  // SIGN UP
+  // -----------------------------------------
 
   async function handleSignUp() {
     setError("");
@@ -50,51 +82,92 @@ function LoginPage() {
       .endsWith("@uni.sydney.edu.au");
 
     if (!validUsydEmail) {
-      setError("Please enter a valid University of Sydney email to sign up.");
+      setError(
+        "Please enter a valid University of Sydney email to sign up."
+      );
+
       return;
     }
 
     if (password.length < 6) {
-      setError("Password must contain at least 6 characters for sign up.");
+      setError(
+        "Password must contain at least 6 characters for sign up."
+      );
+
       return;
     }
 
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const userCredential =
+        await createUserWithEmailAndPassword(
+          auth,
+          email,
+          password
+        );
+
       const user = userCredential.user;
 
-      // Create an initial document in Firestore for the new user
-      await setDoc(doc(db, "users", user.uid), {
-        name: email.split("@")[0],
-        pronouns: "",
-        bio: "",
-        degree: "",
-        major: "",
-        second_major_minor: "",
-        languages: ["English"],
-        interests: [],
-        societies: [],
-        profilePicture: null,
-      });
+      // Create initial Firestore profile
+      await setDoc(
+        doc(db, "users", user.uid),
+        {
+          name: email.split("@")[0],
+          pronouns: "",
+          bio: "",
+          degree: "",
+          major: "",
+          second_major_minor: "",
+          languages: ["English"],
+          interests: [],
+          societies: [],
+          profilePicture: null,
+        }
+      );
 
-      navigate("/profile");
+      // Go to discovery page
+      navigate("/");
     } catch (err) {
       setError(err.message);
     }
   }
 
+
+  // -----------------------------------------
+  // PAGE
+  // -----------------------------------------
+
   return (
     <main className="login-page">
-      <div className="background-decoration decoration-one" />
-      <div className="background-decoration decoration-two" />
+
+      <div
+        className="background-decoration decoration-one"
+      />
+
+      <div
+        className="background-decoration decoration-two"
+      />
+
 
       <section className="login-container">
+
+        {/* BRAND */}
+
         <div className="brand-section">
-          <p className="brand-label">UNIVERSITY OF SYDNEY</p>
+
+          <p className="brand-label">
+            UNIVERSITY OF SYDNEY
+          </p>
 
           <h1 className="brand-name">
-            <span className="brand-white">CHUM</span>
-            <span className="brand-black">BUCKET</span>
+
+            <span className="brand-white">
+              CHUM
+            </span>
+
+            <span className="brand-black">
+              BUDDY
+            </span>
+
           </h1>
 
           <p className="brand-description">
@@ -102,18 +175,40 @@ function LoginPage() {
             <br />
             Connect through what you care about.
           </p>
+
         </div>
 
+
+        {/* LOGIN CARD */}
+
         <div className="login-card">
+
           <div className="card-heading">
-            <p className="small-heading">WELCOME BACK</p>
-            <h2>Sign in</h2>
-            <p>Connect with students across campus.</p>
+
+            <p className="small-heading">
+              WELCOME BACK
+            </p>
+
+            <h2>
+              Sign in
+            </h2>
+
+            <p>
+              Connect with students across campus.
+            </p>
+
           </div>
 
+
+          {/* SIGN IN FORM */}
+
           <form onSubmit={handleSignIn}>
+
             <div className="login-form-group">
-              <label htmlFor="email">University email</label>
+
+              <label htmlFor="email">
+                University email
+              </label>
 
               <input
                 id="email"
@@ -127,10 +222,15 @@ function LoginPage() {
                 autoComplete="email"
                 required
               />
+
             </div>
 
+
             <div className="login-form-group">
-              <label htmlFor="password">Password</label>
+
+              <label htmlFor="password">
+                Password
+              </label>
 
               <input
                 id="password"
@@ -144,20 +244,43 @@ function LoginPage() {
                 autoComplete="current-password"
                 required
               />
+
             </div>
 
-            {error && <p className="error-message">{error}</p>}
 
-            <button className="sign-in-button" type="submit">
+            {error && (
+              <p className="error-message">
+                {error}
+              </p>
+            )}
+
+
+            <button
+              className="sign-in-button"
+              type="submit"
+            >
               Sign in
             </button>
+
           </form>
 
+
+          {/* DIVIDER */}
+
           <div className="login-divider">
+
             <span />
-            <p>OR</p>
+
+            <p>
+              OR
+            </p>
+
             <span />
+
           </div>
+
+
+          {/* SIGN UP */}
 
           <button
             className="sign-up-button"
@@ -167,13 +290,20 @@ function LoginPage() {
             Sign up
           </button>
 
+
           <p className="account-note">
-            New to Chum Bucket? Create an account using your University of Sydney email.
+            New to Chum Buddy? Create an
+            account using your University of
+            Sydney email.
           </p>
+
         </div>
+
       </section>
+
     </main>
   );
 }
+
 
 export default LoginPage;
