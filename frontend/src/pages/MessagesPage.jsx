@@ -1,4 +1,4 @@
-import { addDoc, collection, doc, getDoc, onSnapshot, query, serverTimestamp, where } from "firebase/firestore";
+import { addDoc, collection, doc, getDoc, getDocs, onSnapshot, query, serverTimestamp, where } from "firebase/firestore";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { auth, db } from "../firebase";
@@ -56,7 +56,7 @@ function MessagesPage() {
         return;
       }
 
-      // Load mutual match friends
+      // Load mutual match friends via swipes collection
       await loadFriends(user.uid);
 
       // Listen for chats involving current user
@@ -96,27 +96,42 @@ function MessagesPage() {
   }, [navigate]);
 
   // -----------------------------------------
-  // LOAD FRIENDS FROM MATCHES
+  // LOAD FRIENDS FROM MATCHES (SWIPES)
   // -----------------------------------------
 
   async function loadFriends(uid) {
     try {
-      const currentUserSnapshot = await getDoc(doc(db, "users", uid));
+      const swipesRef = collection(db, "swipes");
 
-      if (!currentUserSnapshot.exists()) {
+      // 1. Get all swipes TO current user where decision is "interested"
+      const toMeSnap = await getDocs(query(swipesRef, where("toUserId", "==", uid)));
+      const whoLikedMe = [];
+      toMeSnap.forEach(docSnap => {
+        const data = docSnap.data();
+        if (data.decision === "interested") {
+          whoLikedMe.push(data.fromUserId);
+        }
+      });
+
+      // 2. Get all swipes FROM current user where decision is "interested"
+      const fromMeSnap = await getDocs(query(swipesRef, where("fromUserId", "==", uid)));
+      const whoILiked = {};
+      fromMeSnap.forEach(docSnap => {
+        const data = docSnap.data();
+        whoILiked[data.toUserId] = data.decision;
+      });
+
+      // 3. Find mutual matches (Intersection)
+      const mutualMatchIds = whoLikedMe.filter(id => whoILiked[id] === "interested");
+
+      if (mutualMatchIds.length === 0) {
         setFriends([]);
         return;
       }
 
-      const friendIds = currentUserSnapshot.data().friends || [];
-
-      if (friendIds.length === 0) {
-        setFriends([]);
-        return;
-      }
-
+      // 4. Fetch profile details for mutual matches
       const friendProfiles = await Promise.all(
-        friendIds.map(async (friendId) => {
+        mutualMatchIds.map(async (friendId) => {
           const friendSnapshot = await getDoc(doc(db, "users", friendId));
           if (!friendSnapshot.exists()) return null;
           return {
@@ -128,7 +143,7 @@ function MessagesPage() {
 
       setFriends(friendProfiles.filter(Boolean));
     } catch (error) {
-      console.error("Error loading friends:", error);
+      console.error("Error loading friends from matches:", error);
       setFriends([]);
     }
   }
