@@ -1,5 +1,6 @@
 from database import mock_users
 import requests
+import pathlib as pl
 from fastapi import FastAPI
 from pydantic import BaseModel
 
@@ -108,6 +109,11 @@ async def translate_placeholder(message: Message, src_lang, dest_lang):
         "target": dest_lang,
         "format": "text"
     }
+
+    api_path = pl.Path(__file__).resolve().parent
+    api_path = api_path / "api" / "api_key.txt"
+    with open(api_path) as f:
+        API_KEY = f.readline().strip("\n")
 
     r = requests.post(url, headers={"X-goog-api-key": API_KEY, "Content-Type": "application/json"}, json=request_body)
     return_data = r.json()
