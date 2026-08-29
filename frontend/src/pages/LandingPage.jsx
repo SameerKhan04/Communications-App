@@ -1,18 +1,32 @@
-// src/pages/LandingPage.jsx
-
-import { useEffect, useState } from "react";
-import { useNavigate } from "react-router";
-import { Check, X } from "lucide-react";
-
 import {
+  arrayUnion,
   collection,
   doc,
+  getDoc,
   getDocs,
   serverTimestamp,
   setDoc,
+  writeBatch,
 } from "firebase/firestore";
 
-import { auth, db } from "../firebase";
+import {
+  useEffect,
+  useState,
+} from "react";
+
+import {
+  Check,
+  X,
+} from "lucide-react";
+
+import {
+  useNavigate,
+} from "react-router";
+
+import {
+  auth,
+  db,
+} from "../firebase";
 
 import "./LandingPage.css";
 
@@ -20,12 +34,20 @@ import "./LandingPage.css";
 function shuffleProfiles(profiles) {
   const shuffled = [...profiles];
 
-  for (let i = shuffled.length - 1; i > 0; i -= 1) {
-    const randomIndex = Math.floor(
-      Math.random() * (i + 1)
-    );
+  for (
+    let i = shuffled.length - 1;
+    i > 0;
+    i -= 1
+  ) {
+    const randomIndex =
+      Math.floor(
+        Math.random() * (i + 1)
+      );
 
-    [shuffled[i], shuffled[randomIndex]] = [
+    [
+      shuffled[i],
+      shuffled[randomIndex],
+    ] = [
       shuffled[randomIndex],
       shuffled[i],
     ];
@@ -38,9 +60,16 @@ function shuffleProfiles(profiles) {
 function LandingPage() {
   const navigate = useNavigate();
 
-  const [profiles, setProfiles] = useState([]);
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [loading, setLoading] = useState(true);
+  const [profiles, setProfiles] =
+    useState([]);
+
+  const [
+    currentIndex,
+    setCurrentIndex,
+  ] = useState(0);
+
+  const [loading, setLoading] =
+    useState(true);
 
 
   // -----------------------------------------
@@ -48,42 +77,62 @@ function LandingPage() {
   // -----------------------------------------
 
   useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged(
-      async (user) => {
-        if (!user) {
-          navigate("/login");
-          return;
+    const unsubscribe =
+      auth.onAuthStateChanged(
+        async (user) => {
+          if (!user) {
+            navigate("/login");
+            return;
+          }
+
+
+          try {
+            const usersSnapshot =
+              await getDocs(
+                collection(
+                  db,
+                  "users"
+                )
+              );
+
+
+            const otherUsers =
+              usersSnapshot.docs
+                .filter(
+                  (userDoc) =>
+                    userDoc.id !==
+                    user.uid
+                )
+                .map(
+                  (userDoc) => ({
+                    id: userDoc.id,
+                    ...userDoc.data(),
+                  })
+                );
+
+
+            setProfiles(
+              shuffleProfiles(
+                otherUsers
+              )
+            );
+
+          } catch (error) {
+            console.error(
+              "Error loading profiles:",
+              error
+            );
+
+          } finally {
+            setLoading(false);
+          }
         }
+      );
 
-        try {
-          const usersSnapshot = await getDocs(
-            collection(db, "users")
-          );
 
-          const otherUsers = usersSnapshot.docs
-            .filter(
-              (userDoc) => userDoc.id !== user.uid
-            )
-            .map((userDoc) => ({
-              id: userDoc.id,
-              ...userDoc.data(),
-            }));
+    return () =>
+      unsubscribe();
 
-          setProfiles(
-            shuffleProfiles(otherUsers)
-          );
-        } catch (error) {
-          console.error(
-            "Error loading profiles:",
-            error
-          );
-        } finally {
-          setLoading(false);
-        }
-      }
-    );
-
-    return () => unsubscribe();
   }, [navigate]);
 
 
@@ -92,7 +141,8 @@ function LandingPage() {
   // -----------------------------------------
 
   const currentProfile =
-    profiles[currentIndex] || null;
+    profiles[currentIndex] ||
+    null;
 
 
   // -----------------------------------------
@@ -100,29 +150,44 @@ function LandingPage() {
   // -----------------------------------------
 
   function showNextProfile() {
-    if (profiles.length === 0) {
+    if (
+      profiles.length === 0
+    ) {
       return;
     }
 
-    // More profiles remaining in current pass
-    if (currentIndex < profiles.length - 1) {
+
+    // More users still available
+
+    if (
+      currentIndex <
+      profiles.length - 1
+    ) {
       setCurrentIndex(
-        (previousIndex) => previousIndex + 1
+        (previousIndex) =>
+          previousIndex + 1
       );
 
       return;
     }
 
-    // Reached the end.
-    // Shuffle again so discovery keeps going.
+
+    // Reached end of current pass.
+    // Reshuffle and keep discovery going.
+
     const previousProfileId =
       currentProfile?.id;
 
-    const reshuffledProfiles =
-      shuffleProfiles(profiles);
 
-    // Avoid showing the same person immediately
-    // after reshuffling when possible.
+    const reshuffledProfiles =
+      shuffleProfiles(
+        profiles
+      );
+
+
+    // Avoid showing exactly the same
+    // person twice in a row.
+
     if (
       reshuffledProfiles.length > 1 &&
       reshuffledProfiles[0]?.id ===
@@ -137,8 +202,129 @@ function LandingPage() {
       ];
     }
 
-    setProfiles(reshuffledProfiles);
+
+    setProfiles(
+      reshuffledProfiles
+    );
+
     setCurrentIndex(0);
+  }
+
+
+  // -----------------------------------------
+  // CHECK FOR MUTUAL MATCH
+  // -----------------------------------------
+
+  async function checkForMatch(
+    currentUserId,
+    otherUserId
+  ) {
+    try {
+      // Reverse swipe:
+      //
+      // other user -> current user
+
+      const reverseSwipeId =
+        `${otherUserId}_${currentUserId}`;
+
+
+      const reverseSwipeSnapshot =
+        await getDoc(
+          doc(
+            db,
+            "swipes",
+            reverseSwipeId
+          )
+        );
+
+
+      if (
+        !reverseSwipeSnapshot.exists()
+      ) {
+        return false;
+      }
+
+
+      const reverseSwipe =
+        reverseSwipeSnapshot.data();
+
+
+      if (
+        reverseSwipe.decision !==
+        "interested"
+      ) {
+        return false;
+      }
+
+
+      // -----------------------------------------
+      // MATCH FOUND
+      // Add each user to the other's
+      // friends array.
+      // -----------------------------------------
+
+      const batch =
+        writeBatch(db);
+
+
+      const currentUserRef =
+        doc(
+          db,
+          "users",
+          currentUserId
+        );
+
+
+      const otherUserRef =
+        doc(
+          db,
+          "users",
+          otherUserId
+        );
+
+
+      batch.update(
+        currentUserRef,
+        {
+          friends:
+            arrayUnion(
+              otherUserId
+            ),
+        }
+      );
+
+
+      batch.update(
+        otherUserRef,
+        {
+          friends:
+            arrayUnion(
+              currentUserId
+            ),
+        }
+      );
+
+
+      await batch.commit();
+
+
+      console.log(
+        "Match created between:",
+        currentUserId,
+        otherUserId
+      );
+
+
+      return true;
+
+    } catch (error) {
+      console.error(
+        "Error creating match:",
+        error
+      );
+
+      return false;
+    }
   }
 
 
@@ -146,32 +332,84 @@ function LandingPage() {
   // HANDLE X / TICK
   // -----------------------------------------
 
-  async function handleDecision(decision) {
-    const user = auth.currentUser;
+  async function handleDecision(
+    decision
+  ) {
+    const user =
+      auth.currentUser;
 
-    if (!user || !currentProfile) {
+
+    if (
+      !user ||
+      !currentProfile
+    ) {
       return;
     }
 
-    // Move immediately so the UI feels responsive.
+
+    // Preserve this profile before
+    // moving the UI forward.
+
+    const selectedProfile =
+      currentProfile;
+
+
+    // Move immediately so discovery
+    // stays responsive.
+
     showNextProfile();
+
 
     try {
       const swipeId =
-        `${user.uid}_${currentProfile.id}`;
+        `${user.uid}_${selectedProfile.id}`;
+
+
+      // Always save this user's decision.
 
       await setDoc(
-        doc(db, "swipes", swipeId),
+        doc(
+          db,
+          "swipes",
+          swipeId
+        ),
         {
-          fromUserId: user.uid,
-          toUserId: currentProfile.id,
+          fromUserId:
+            user.uid,
+
+          toUserId:
+            selectedProfile.id,
+
           decision,
-          updatedAt: serverTimestamp(),
+
+          updatedAt:
+            serverTimestamp(),
         },
         {
           merge: true,
         }
       );
+
+
+      // Passing does not need any
+      // reciprocal-match check.
+
+      if (
+        decision !==
+        "interested"
+      ) {
+        return;
+      }
+
+
+      // Check whether the other person
+      // already liked this user.
+
+      await checkForMatch(
+        user.uid,
+        selectedProfile.id
+      );
+
     } catch (error) {
       console.error(
         "Error saving decision:",
@@ -188,9 +426,15 @@ function LandingPage() {
   if (loading) {
     return (
       <main className="landing-page">
+
         <div className="landing-container">
-          <p>Loading people...</p>
+
+          <p>
+            Loading people...
+          </p>
+
         </div>
+
       </main>
     );
   }
@@ -208,34 +452,41 @@ function LandingPage() {
         {/* PAGE HEADING */}
 
         <section className="landing-heading">
+
           <p className="landing-eyebrow">
             DISCOVER
           </p>
+
 
           <h1>
             Find your people.
           </h1>
 
+
           <p>
-            Meet students across campus and
-            connect with people you might
-            get along with.
+            Meet students across campus
+            and connect with people you
+            might get along with.
           </p>
+
         </section>
 
 
         {/* NO OTHER USERS */}
 
         {!currentProfile ? (
+
           <section className="landing-empty-card">
 
             <p className="landing-eyebrow">
               NO PROFILES YET
             </p>
 
+
             <h2>
               More chums are on the way.
             </h2>
+
 
             <p>
               Once more students join,
@@ -244,6 +495,7 @@ function LandingPage() {
             </p>
 
           </section>
+
         ) : (
 
           <div className="landing-profile-area">
@@ -252,7 +504,9 @@ function LandingPage() {
 
             <article
               className="landing-profile-card"
-              key={currentProfile.id}
+              key={
+                currentProfile.id
+              }
             >
 
               <div className="landing-profile-top">
@@ -261,16 +515,21 @@ function LandingPage() {
 
                 <div className="landing-profile-picture">
 
-                  {currentProfile.profilePicture ? (
+                  {currentProfile
+                    .profilePicture ? (
+
                     <img
                       src={
-                        currentProfile.profilePicture
+                        currentProfile
+                          .profilePicture
                       }
                       alt={
                         `${currentProfile.name}'s profile`
                       }
                     />
+
                   ) : (
+
                     <span>
                       {currentProfile.name
                         ? currentProfile.name
@@ -278,6 +537,7 @@ function LandingPage() {
                             .toUpperCase()
                         : "?"}
                     </span>
+
                   )}
 
                 </div>
@@ -291,6 +551,7 @@ function LandingPage() {
                     STUDENT PROFILE
                   </p>
 
+
                   <div className="landing-name-row">
 
                     <h2>
@@ -298,12 +559,17 @@ function LandingPage() {
                         "USYD Student"}
                     </h2>
 
-                    {currentProfile.pronouns && (
+
+                    {currentProfile
+                      .pronouns && (
+
                       <span>
                         {
-                          currentProfile.pronouns
+                          currentProfile
+                            .pronouns
                         }
                       </span>
+
                     )}
 
                   </div>
@@ -311,6 +577,7 @@ function LandingPage() {
 
                   {(currentProfile.degree ||
                     currentProfile.major) && (
+
                     <p className="landing-study">
 
                       {[
@@ -321,13 +588,18 @@ function LandingPage() {
                         .join(" · ")}
 
                     </p>
+
                   )}
 
 
                   {currentProfile.bio && (
+
                     <p className="landing-bio">
-                      {currentProfile.bio}
+                      {
+                        currentProfile.bio
+                      }
                     </p>
+
                   )}
 
                 </div>
@@ -340,7 +612,8 @@ function LandingPage() {
               <ProfileTags
                 title="Interests"
                 items={
-                  currentProfile.interests
+                  currentProfile
+                    .interests
                 }
                 highlight
               />
@@ -351,7 +624,8 @@ function LandingPage() {
               <ProfileTags
                 title="Languages"
                 items={
-                  currentProfile.languages
+                  currentProfile
+                    .languages
                 }
               />
 
@@ -361,23 +635,29 @@ function LandingPage() {
               <ProfileTags
                 title="Societies"
                 items={
-                  currentProfile.societies
+                  currentProfile
+                    .societies
                 }
               />
 
             </article>
 
 
-            {/* X / TICK BUTTONS */}
+            {/* X / TICK */}
 
             <div className="landing-actions">
 
               <button
                 type="button"
-                className="landing-action-button landing-pass-button"
+                className="
+                  landing-action-button
+                  landing-pass-button
+                "
                 aria-label="Pass"
                 onClick={() =>
-                  handleDecision("pass")
+                  handleDecision(
+                    "pass"
+                  )
                 }
               >
                 <X
@@ -389,10 +669,15 @@ function LandingPage() {
 
               <button
                 type="button"
-                className="landing-action-button landing-connect-button"
+                className="
+                  landing-action-button
+                  landing-connect-button
+                "
                 aria-label="Connect"
                 onClick={() =>
-                  handleDecision("interested")
+                  handleDecision(
+                    "interested"
+                  )
                 }
               >
                 <Check
@@ -404,6 +689,7 @@ function LandingPage() {
             </div>
 
           </div>
+
         )}
 
       </div>
@@ -426,6 +712,7 @@ function ProfileTags({
     return null;
   }
 
+
   return (
     <section className="landing-profile-section">
 
@@ -433,20 +720,25 @@ function ProfileTags({
         {title}
       </h3>
 
+
       <div className="landing-profile-tags">
 
-        {items.map((item) => (
-          <span
-            key={item}
-            className={
-              highlight
-                ? "landing-profile-tag highlighted"
-                : "landing-profile-tag"
-            }
-          >
-            {item}
-          </span>
-        ))}
+        {items.map(
+          (item) => (
+
+            <span
+              key={item}
+              className={
+                highlight
+                  ? "landing-profile-tag highlighted"
+                  : "landing-profile-tag"
+              }
+            >
+              {item}
+            </span>
+
+          )
+        )}
 
       </div>
 

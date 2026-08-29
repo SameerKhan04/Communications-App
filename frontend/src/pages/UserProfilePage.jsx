@@ -1,42 +1,180 @@
+import {
+  addDoc,
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  query,
+  serverTimestamp,
+  where,
+} from "firebase/firestore";
+
+import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router";
+
+import { auth, db } from "../firebase";
 
 import "./ProfilePage.css";
 
-const MOCK_USERS = {
-  u1: {
-    id: "u1",
-    name: "Sameer",
-    pronouns: "he/him",
-    bio: "Software engineering student who likes tech and meeting new people.",
-    degree: "Software Engineering",
-    major: "",
-    second_major_minor: "",
-    languages: ["English", "Urdu"],
-    interests: ["Coding", "Gaming"],
-    societies: ["CSESoc", "SUAnime"],
-    profilePicture: null,
-  },
-
-  u5: {
-    id: "u5",
-    name: "Hannah",
-    pronouns: "she/her",
-    bio: "Engineering student interested in gaming and technology.",
-    degree: "Software Engineering",
-    major: "",
-    second_major_minor: "",
-    languages: ["English", "Mandarin"],
-    interests: ["Gaming", "Coding"],
-    societies: ["CSESoc", "GamingSoc"],
-    profilePicture: null,
-  },
-};
 
 function UserProfilePage() {
   const { userId } = useParams();
   const navigate = useNavigate();
 
-  const profile = MOCK_USERS[userId];
+  const [profile, setProfile] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [messageLoading, setMessageLoading] = useState(false);
+
+
+  // -----------------------------------------
+  // LOAD USER PROFILE
+  // -----------------------------------------
+
+  useEffect(() => {
+    async function loadProfile() {
+      try {
+        const userRef = doc(
+          db,
+          "users",
+          userId
+        );
+
+        const userSnapshot =
+          await getDoc(userRef);
+
+        if (!userSnapshot.exists()) {
+          setProfile(null);
+          return;
+        }
+
+        setProfile({
+          id: userSnapshot.id,
+          ...userSnapshot.data(),
+        });
+
+      } catch (error) {
+        console.error(
+          "Error loading user profile:",
+          error
+        );
+
+        setProfile(null);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadProfile();
+  }, [userId]);
+
+
+  // -----------------------------------------
+  // OPEN / CREATE CHAT
+  // -----------------------------------------
+
+  async function handleMessage() {
+    const currentUser = auth.currentUser;
+
+    if (
+      !currentUser ||
+      !profile ||
+      messageLoading
+    ) {
+      return;
+    }
+
+    if (currentUser.uid === profile.id) {
+      return;
+    }
+
+    setMessageLoading(true);
+
+    try {
+      // Find chats belonging to current user
+      const chatsQuery = query(
+        collection(db, "chats"),
+        where(
+          "participants",
+          "array-contains",
+          currentUser.uid
+        )
+      );
+
+      const chatsSnapshot =
+        await getDocs(chatsQuery);
+
+
+      // Check whether a chat with this user
+      // already exists
+      const existingChat =
+        chatsSnapshot.docs.find(
+          (chatDoc) => {
+            const participants =
+              chatDoc.data().participants || [];
+
+            return participants.includes(
+              profile.id
+            );
+          }
+        );
+
+
+      if (existingChat) {
+        navigate(
+          `/messages/${existingChat.id}`
+        );
+
+        return;
+      }
+
+
+      // No existing chat — create one
+      const newChat = await addDoc(
+        collection(db, "chats"),
+        {
+          participants: [
+            currentUser.uid,
+            profile.id,
+          ],
+          lastMessage: "Say hi!",
+          updatedAt: serverTimestamp(),
+        }
+      );
+
+
+      navigate(
+        `/messages/${newChat.id}`
+      );
+
+    } catch (error) {
+      console.error(
+        "Error opening chat:",
+        error
+      );
+    } finally {
+      setMessageLoading(false);
+    }
+  }
+
+
+  // -----------------------------------------
+  // LOADING
+  // -----------------------------------------
+
+  if (loading) {
+    return (
+      <main className="public-profile-page">
+        <div className="public-profile-container">
+          <p>Loading profile...</p>
+        </div>
+      </main>
+    );
+  }
+
+
+  // -----------------------------------------
+  // USER NOT FOUND
+  // -----------------------------------------
 
   if (!profile) {
     return (
@@ -48,27 +186,24 @@ function UserProfilePage() {
     );
   }
 
-  function handleMessage() {
-    // Later this should open/create a conversation
-    // with this specific user.
-    navigate(`/chat/${profile.id}`);
-  }
+
+  // -----------------------------------------
+  // PAGE
+  // -----------------------------------------
 
   return (
     <main className="public-profile-page">
-      <header className="public-profile-navbar">
-        <div className="public-profile-logo">
-          <span>CHUM</span>
-          <strong>BUDDY</strong>
-        </div>
-
-        <span>Profile</span>
-      </header>
 
       <div className="public-profile-container">
+
         <section className="public-profile-card">
+
           <div className="public-profile-top">
+
+            {/* PROFILE PICTURE */}
+
             <div className="public-profile-picture">
+
               {profile.profilePicture ? (
                 <img
                   src={profile.profilePicture}
@@ -76,17 +211,30 @@ function UserProfilePage() {
                 />
               ) : (
                 <span>
-                  {profile.name.charAt(0).toUpperCase()}
+                  {profile.name
+                    ? profile.name
+                        .charAt(0)
+                        .toUpperCase()
+                    : "?"}
                 </span>
               )}
+
             </div>
 
+
+            {/* IDENTITY */}
+
             <div className="public-profile-identity">
+
               <p className="public-profile-eyebrow">
                 STUDENT PROFILE
               </p>
 
-              <h1>{profile.name}</h1>
+              <h1>
+                {profile.name ||
+                  "USYD Student"}
+              </h1>
+
 
               {profile.pronouns && (
                 <p className="public-profile-pronouns">
@@ -94,59 +242,104 @@ function UserProfilePage() {
                 </p>
               )}
 
+
               {profile.bio && (
                 <p className="public-profile-bio">
                   {profile.bio}
                 </p>
               )}
+
             </div>
 
-            <button
-              type="button"
-              className="public-message-button"
-              onClick={handleMessage}
-            >
-              Message
-            </button>
+
+            {/* MESSAGE */}
+
+            {auth.currentUser?.uid !==
+              profile.id && (
+
+              <button
+                type="button"
+                className="public-message-button"
+                onClick={handleMessage}
+                disabled={messageLoading}
+              >
+                {messageLoading
+                  ? "Opening..."
+                  : "Message"}
+              </button>
+
+            )}
+
           </div>
+
+
+          {/* STUDY */}
 
           {(profile.degree ||
             profile.major ||
             profile.second_major_minor) && (
+
             <section className="public-profile-section">
-              <h2>Study</h2>
+
+              <h2>
+                Study
+              </h2>
+
 
               <div className="public-study-details">
+
                 {profile.degree && (
                   <div>
-                    <span>Degree</span>
-                    <strong>{profile.degree}</strong>
-                  </div>
-                )}
+                    <span>
+                      Degree
+                    </span>
 
-                {profile.major && (
-                  <div>
-                    <span>Major</span>
-                    <strong>{profile.major}</strong>
-                  </div>
-                )}
-
-                {profile.second_major_minor && (
-                  <div>
-                    <span>Second major / minor</span>
                     <strong>
-                      {profile.second_major_minor}
+                      {profile.degree}
                     </strong>
                   </div>
                 )}
+
+
+                {profile.major && (
+                  <div>
+                    <span>
+                      Major
+                    </span>
+
+                    <strong>
+                      {profile.major}
+                    </strong>
+                  </div>
+                )}
+
+
+                {profile.second_major_minor && (
+                  <div>
+                    <span>
+                      Second major / minor
+                    </span>
+
+                    <strong>
+                      {
+                        profile.second_major_minor
+                      }
+                    </strong>
+                  </div>
+                )}
+
               </div>
+
             </section>
+
           )}
+
 
           <ProfileTags
             title="Languages"
             items={profile.languages}
           />
+
 
           <ProfileTags
             title="Interests"
@@ -154,31 +347,45 @@ function UserProfilePage() {
             highlight
           />
 
+
           <ProfileTags
             title="Societies"
             items={profile.societies}
             highlight
           />
+
         </section>
+
       </div>
+
     </main>
   );
 }
+
+
+// -----------------------------------------
+// PROFILE TAG SECTION
+// -----------------------------------------
 
 function ProfileTags({
   title,
   items = [],
   highlight = false,
 }) {
-  if (!items.length) {
+  if (!items?.length) {
     return null;
   }
 
   return (
     <section className="public-profile-section">
-      <h2>{title}</h2>
+
+      <h2>
+        {title}
+      </h2>
+
 
       <div className="public-profile-tags">
+
         {items.map((item) => (
           <span
             key={item}
@@ -191,9 +398,12 @@ function ProfileTags({
             {item}
           </span>
         ))}
+
       </div>
+
     </section>
   );
 }
+
 
 export default UserProfilePage;

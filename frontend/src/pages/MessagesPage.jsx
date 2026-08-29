@@ -1,168 +1,789 @@
-import { useState, useEffect } from "react";
-import { useNavigate } from "react-router";
-import { auth, db } from "../firebase";
-import { collection, query, where, onSnapshot, getDocs, doc, getDoc, updateDoc, arrayUnion, addDoc, serverTimestamp } from "firebase/firestore";
+import {
+  addDoc,
+  arrayUnion,
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  onSnapshot,
+  query,
+  serverTimestamp,
+  where,
+  writeBatch,
+} from "firebase/firestore";
+
+import {
+  useEffect,
+  useState,
+} from "react";
+
+import {
+  useNavigate,
+} from "react-router";
+
+import {
+  auth,
+  db,
+} from "../firebase";
+
 import "./Messages.css";
+
 
 function MessagesPage() {
   const navigate = useNavigate();
+
   const [chats, setChats] = useState([]);
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const [friends, setFriends] = useState([]);
-  const [friendEmail, setFriendEmail] = useState("");
-  const [modalError, setModalError] = useState("");
+
+  const [isModalOpen, setIsModalOpen] =
+    useState(false);
+
+  const [friendEmail, setFriendEmail] =
+    useState("");
+
+  const [modalError, setModalError] =
+    useState("");
+
+  const [addingFriend, setAddingFriend] =
+    useState(false);
+
+
+  // -----------------------------------------
+  // AUTH + LIVE CHAT LIST
+  // -----------------------------------------
 
   useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged((user) => {
-      if (!user) return navigate("/login");
+    let unsubscribeChats = null;
 
-      // 1. Listen for active chats
-      const q = query(collection(db, "chats"), where("participants", "array-contains", user.uid));
-      onSnapshot(q, (snapshot) => {
-        const chatList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        // Sort by newest first
-        chatList.sort((a, b) => b.updatedAt?.toMillis() - a.updatedAt?.toMillis());
-        setChats(chatList);
-      });
+    const unsubscribeAuth =
+      auth.onAuthStateChanged(
+        async (user) => {
+          if (!user) {
+            navigate("/login");
+            return;
+          }
 
-      // 2. Load friends list
-      loadFriends(user.uid);
-    });
-    return () => unsubscribe();
+
+          // Load friends
+
+          await loadFriends(user.uid);
+
+
+          // Listen for chats involving current user
+
+          const chatsQuery = query(
+            collection(db, "chats"),
+            where(
+              "participants",
+              "array-contains",
+              user.uid
+            )
+          );
+
+
+          unsubscribeChats = onSnapshot(
+            chatsQuery,
+            async (snapshot) => {
+              try {
+                const loadedChats =
+                  await Promise.all(
+                    snapshot.docs.map(
+                      async (chatDoc) => {
+                        const chatData =
+                          chatDoc.data();
+
+                        const participants =
+                          chatData.participants || [];
+
+
+                        const otherUserId =
+                          participants.find(
+                            (participantId) =>
+                              participantId !==
+                              user.uid
+                          );
+
+
+                        let otherUser = null;
+
+
+                        if (otherUserId) {
+                          const userSnapshot =
+                            await getDoc(
+                              doc(
+                                db,
+                                "users",
+                                otherUserId
+                              )
+                            );
+
+
+                          if (
+                            userSnapshot.exists()
+                          ) {
+                            otherUser = {
+                              id:
+                                userSnapshot.id,
+                              ...userSnapshot.data(),
+                            };
+                          }
+                        }
+
+
+                        return {
+                          id: chatDoc.id,
+                          ...chatData,
+                          otherUser,
+                        };
+                      }
+                    )
+                  );
+
+
+                // Newest chats first
+
+                loadedChats.sort(
+                  (a, b) => {
+                    const timeA =
+                      a.updatedAt
+                        ?.toMillis?.() || 0;
+
+                    const timeB =
+                      b.updatedAt
+                        ?.toMillis?.() || 0;
+
+                    return timeB - timeA;
+                  }
+                );
+
+
+                setChats(loadedChats);
+
+              } catch (error) {
+                console.error(
+                  "Error loading chats:",
+                  error
+                );
+              }
+            },
+            (error) => {
+              console.error(
+                "Chat listener error:",
+                error
+              );
+            }
+          );
+        }
+      );
+
+
+    return () => {
+      unsubscribeAuth();
+
+      if (unsubscribeChats) {
+        unsubscribeChats();
+      }
+    };
+
   }, [navigate]);
 
+
+  // -----------------------------------------
+  // LOAD FRIENDS
+  // -----------------------------------------
+
   async function loadFriends(uid) {
-    const userDoc = await getDoc(doc(db, "users", uid));
-    if (userDoc.exists() && userDoc.data().friends) {
-      const friendIds = userDoc.data().friends;
-      const loadedFriends = [];
-      for (const fId of friendIds) {
-        const fDoc = await getDoc(doc(db, "users", fId));
-        if (fDoc.exists()) loadedFriends.push({ id: fDoc.id, ...fDoc.data() });
+    try {
+      const currentUserSnapshot =
+        await getDoc(
+          doc(
+            db,
+            "users",
+            uid
+          )
+        );
+
+
+      if (!currentUserSnapshot.exists()) {
+        setFriends([]);
+        return;
       }
-      setFriends(loadedFriends);
+
+
+      const friendIds =
+        currentUserSnapshot.data()
+          .friends || [];
+
+
+      if (friendIds.length === 0) {
+        setFriends([]);
+        return;
+      }
+
+
+      const friendProfiles =
+        await Promise.all(
+          friendIds.map(
+            async (friendId) => {
+              const friendSnapshot =
+                await getDoc(
+                  doc(
+                    db,
+                    "users",
+                    friendId
+                  )
+                );
+
+
+              if (!friendSnapshot.exists()) {
+                return null;
+              }
+
+
+              return {
+                id: friendSnapshot.id,
+                ...friendSnapshot.data(),
+              };
+            }
+          )
+        );
+
+
+      setFriends(
+        friendProfiles.filter(Boolean)
+      );
+
+    } catch (error) {
+      console.error(
+        "Error loading friends:",
+        error
+      );
+
+      setFriends([]);
     }
   }
 
-  async function handleAddFriend(e) {
-    e.preventDefault();
+
+  // -----------------------------------------
+  // ADD MUTUAL FRIEND
+  // -----------------------------------------
+
+  async function handleAddFriend(event) {
+    event.preventDefault();
+
+    const currentUser =
+      auth.currentUser;
+
+
+    if (!currentUser) {
+      return;
+    }
+
+
+    const cleanedEmail =
+      friendEmail
+        .trim()
+        .toLowerCase();
+
+
+    if (!cleanedEmail) {
+      return;
+    }
+
+
     setModalError("");
-    const currentUser = auth.currentUser;
-    
-    if (friendEmail.toLowerCase() === currentUser.email?.toLowerCase()) {
-      return setModalError("You can't add yourself!");
+
+
+    if (
+      cleanedEmail ===
+      currentUser.email
+        ?.toLowerCase()
+    ) {
+      setModalError(
+        "You can't add yourself."
+      );
+
+      return;
     }
 
-    // Find user by email
-    const usersRef = collection(db, "users");
-    const q = query(usersRef, where("email", "==", friendEmail.toLowerCase()));
-    const snapshot = await getDocs(q);
 
-    if (snapshot.empty) {
-      return setModalError("No user found with that email.");
+    setAddingFriend(true);
+
+
+    try {
+      // Find user by email
+
+      const usersQuery = query(
+        collection(db, "users"),
+        where(
+          "email",
+          "==",
+          cleanedEmail
+        )
+      );
+
+
+      const snapshot =
+        await getDocs(usersQuery);
+
+
+      if (snapshot.empty) {
+        setModalError(
+          "No user found with that email."
+        );
+
+        return;
+      }
+
+
+      const newFriendDocument =
+        snapshot.docs[0];
+
+
+      const newFriendId =
+        newFriendDocument.id;
+
+
+      // Check existing friendship
+
+      const alreadyFriends =
+        friends.some(
+          (friend) =>
+            friend.id === newFriendId
+        );
+
+
+      if (alreadyFriends) {
+        setModalError(
+          "This person is already in your friends list."
+        );
+
+        return;
+      }
+
+
+      // -----------------------------------------
+      // MUTUAL FRIENDSHIP
+      // -----------------------------------------
+
+      const batch =
+        writeBatch(db);
+
+
+      const currentUserRef =
+        doc(
+          db,
+          "users",
+          currentUser.uid
+        );
+
+
+      const newFriendRef =
+        doc(
+          db,
+          "users",
+          newFriendId
+        );
+
+
+      // Add friend to current user
+
+      batch.update(
+        currentUserRef,
+        {
+          friends:
+            arrayUnion(
+              newFriendId
+            ),
+        }
+      );
+
+
+      // Add current user to friend
+
+      batch.update(
+        newFriendRef,
+        {
+          friends:
+            arrayUnion(
+              currentUser.uid
+            ),
+        }
+      );
+
+
+      await batch.commit();
+
+
+      setFriendEmail("");
+
+
+      await loadFriends(
+        currentUser.uid
+      );
+
+    } catch (error) {
+      console.error(
+        "Error adding friend:",
+        error
+      );
+
+      setModalError(
+        "Something went wrong while adding this friend."
+      );
+
+    } finally {
+      setAddingFriend(false);
     }
-
-    const newFriend = snapshot.docs[0];
-    
-    // Add to current user's friends array
-    await updateDoc(doc(db, "users", currentUser.uid), {
-      friends: arrayUnion(newFriend.id)
-    });
-
-    setFriendEmail("");
-    loadFriends(currentUser.uid);
   }
+
+
+  // -----------------------------------------
+  // START / OPEN CHAT
+  // -----------------------------------------
 
   async function startChat(friendId) {
-    const currentUser = auth.currentUser;
-    
-    // Check if chat already exists
-    const existingChat = chats.find(c => c.participants.includes(friendId));
-    if (existingChat) {
-      return navigate(`/messages/${existingChat.id}`);
+    const currentUser =
+      auth.currentUser;
+
+
+    if (!currentUser) {
+      return;
     }
 
-    // Create new chat
-    const newChat = await addDoc(collection(db, "chats"), {
-      participants: [currentUser.uid, friendId],
-      updatedAt: serverTimestamp(),
-      lastMessage: "Say hi!"
-    });
 
-    navigate(`/messages/${newChat.id}`);
+    try {
+      // Check loaded chats first
+
+      const existingChat =
+        chats.find((chat) => {
+          const participants =
+            chat.participants || [];
+
+
+          return (
+            participants.includes(
+              currentUser.uid
+            ) &&
+            participants.includes(
+              friendId
+            )
+          );
+        });
+
+
+      if (existingChat) {
+        navigate(
+          `/messages/${existingChat.id}`
+        );
+
+        return;
+      }
+
+
+      // Create conversation
+
+      const newChat =
+        await addDoc(
+          collection(
+            db,
+            "chats"
+          ),
+          {
+            participants: [
+              currentUser.uid,
+              friendId,
+            ],
+
+            lastMessage:
+              "Say hi!",
+
+            updatedAt:
+              serverTimestamp(),
+          }
+        );
+
+
+      navigate(
+        `/messages/${newChat.id}`
+      );
+
+    } catch (error) {
+      console.error(
+        "Error starting chat:",
+        error
+      );
+    }
   }
+
+
+  // -----------------------------------------
+  // PAGE
+  // -----------------------------------------
 
   return (
     <main className="messages-page">
-      <header className="public-profile-navbar">
-        <div className="public-profile-logo" onClick={() => navigate("/profile")} style={{cursor: "pointer"}}>
-          <span>CHUM</span><strong>BUCKET</strong>
-        </div>
-        <span>Direct Messages</span>
-      </header>
 
       <div className="messages-container">
+
+        {/* HEADER */}
+
         <div className="messages-header">
-          <h1>Messages</h1>
-          <button className="new-chat-button" onClick={() => setIsModalOpen(true)}>+ New Chat</button>
+
+          <h1>
+            Messages
+          </h1>
+
+
+          <button
+            type="button"
+            className="new-chat-button"
+            onClick={() => {
+              setModalError("");
+              setFriendEmail("");
+              setIsModalOpen(true);
+            }}
+          >
+            + New Chat
+          </button>
+
         </div>
 
+
+        {/* CHAT LIST */}
+
         <div className="chat-list">
+
           {chats.length === 0 ? (
-            <p className="empty-state">No messages yet. Start a chat!</p>
+
+            <p className="empty-state">
+              No messages yet.
+              Start a chat!
+            </p>
+
           ) : (
-            chats.map(chat => {
-              // Get the ID of the *other* person in the chat
-              const otherUserId = chat.participants.find(id => id !== auth.currentUser?.uid);
+
+            chats.map((chat) => {
+
+              const otherUser =
+                chat.otherUser;
+
+
+              const displayName =
+                otherUser?.name ||
+                "USYD Student";
+
+
+              const initial =
+                displayName
+                  .charAt(0)
+                  .toUpperCase();
+
+
               return (
-                <div key={chat.id} className="chat-row" onClick={() => navigate(`/messages/${chat.id}`)}>
-                  <div className="chat-row-avatar">?</div>
-                  <div className="chat-row-details">
-                    <strong>User {otherUserId?.substring(0, 5)}...</strong>
-                    <p>{chat.lastMessage}</p>
+                <div
+                  key={chat.id}
+                  className="chat-row"
+                  role="button"
+                  tabIndex={0}
+                  onClick={() =>
+                    navigate(
+                      `/messages/${chat.id}`
+                    )
+                  }
+                  onKeyDown={(event) => {
+                    if (
+                      event.key === "Enter" ||
+                      event.key === " "
+                    ) {
+                      navigate(
+                        `/messages/${chat.id}`
+                      );
+                    }
+                  }}
+                >
+
+                  {/* AVATAR */}
+
+                  <div className="chat-row-avatar">
+
+                    {otherUser
+                      ?.profilePicture ? (
+
+                      <img
+                        src={
+                          otherUser
+                            .profilePicture
+                        }
+                        alt={
+                          `${displayName}'s profile`
+                        }
+                      />
+
+                    ) : (
+
+                      <span>
+                        {initial}
+                      </span>
+
+                    )}
+
                   </div>
+
+
+                  {/* DETAILS */}
+
+                  <div className="chat-row-details">
+
+                    <strong>
+                      {displayName}
+                    </strong>
+
+                    <p>
+                      {chat.lastMessage ||
+                        "Start a conversation"}
+                    </p>
+
+                  </div>
+
                 </div>
               );
             })
+
           )}
+
         </div>
+
       </div>
 
+
+      {/* =========================
+          NEW CHAT MODAL
+          ========================= */}
+
       {isModalOpen && (
-        <div className="modal-overlay" onClick={() => setIsModalOpen(false)}>
-          <div className="modal-content" onClick={e => e.stopPropagation()}>
-            <h2>Start a Chat</h2>
-            
-            <form onSubmit={handleAddFriend} className="add-friend-form">
-              <input 
-                type="email" 
-                placeholder="Add friend by university email..." 
+
+        <div
+          className="modal-overlay"
+          onClick={() =>
+            setIsModalOpen(false)
+          }
+        >
+
+          <div
+            className="modal-content"
+            onClick={(event) =>
+              event.stopPropagation()
+            }
+          >
+
+            <h2>
+              Start a Chat
+            </h2>
+
+
+            {/* ADD FRIEND */}
+
+            <form
+              className="add-friend-form"
+              onSubmit={handleAddFriend}
+            >
+
+              <input
+                type="email"
+                placeholder="Add friend by university email..."
                 value={friendEmail}
-                onChange={e => setFriendEmail(e.target.value)}
+                onChange={(event) => {
+                  setFriendEmail(
+                    event.target.value
+                  );
+
+                  setModalError("");
+                }}
                 required
               />
-              <button type="submit">Add</button>
+
+
+              <button
+                type="submit"
+                disabled={addingFriend}
+              >
+                {addingFriend
+                  ? "Adding..."
+                  : "Add"}
+              </button>
+
             </form>
-            {modalError && <p className="error-message">{modalError}</p>}
+
+
+            {modalError && (
+              <p className="error-message">
+                {modalError}
+              </p>
+            )}
+
+
+            {/* FRIEND LIST */}
 
             <div className="friends-list">
-              <h3>Your Friends</h3>
+
+              <h3>
+                Your Friends
+              </h3>
+
+
               {friends.length === 0 ? (
-                <p className="empty-state">Add a friend above to start chatting.</p>
+
+                <p className="empty-state">
+                  Add a friend above
+                  to start chatting.
+                </p>
+
               ) : (
-                friends.map(friend => (
-                  <div key={friend.id} className="friend-row">
-                    <span>{friend.name}</span>
-                    <button onClick={() => startChat(friend.id)}>Chat</button>
-                  </div>
-                ))
+
+                friends.map(
+                  (friend) => (
+
+                    <div
+                      key={friend.id}
+                      className="friend-row"
+                    >
+
+                      <span>
+                        {friend.name ||
+                          "USYD Student"}
+                      </span>
+
+
+                      <button
+                        type="button"
+                        onClick={() =>
+                          startChat(
+                            friend.id
+                          )
+                        }
+                      >
+                        Chat
+                      </button>
+
+                    </div>
+
+                  )
+                )
+
               )}
+
             </div>
+
           </div>
+
         </div>
+
       )}
+
     </main>
   );
 }
+
 
 export default MessagesPage;

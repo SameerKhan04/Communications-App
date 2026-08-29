@@ -3,6 +3,9 @@
    ========================= */
 
 .app-navbar {
+  position: relative;
+  z-index: 100;
+
   width: 100%;
   height: 72px;
 
@@ -54,7 +57,7 @@
 
 
 /* =========================
-   NAVIGATION LINKS
+   NAVIGATION
    ========================= */
 
 .app-navbar-links {
@@ -63,6 +66,11 @@
 
   gap: 8px;
 }
+
+
+/* =========================
+   LINKS
+   ========================= */
 
 .app-navbar-link {
   padding: 9px 13px;
@@ -96,35 +104,12 @@
 
 
 /* =========================
-   RESPONSIVE
-   ========================= */
-
-@media (max-width: 650px) {
-  .app-navbar {
-    padding: 0 4%;
-  }
-
-  .app-navbar-logo {
-    font-size: 17px;
-  }
-
-  .app-navbar-links {
-    gap: 2px;
-  }
-
-  .app-navbar-link {
-    padding: 8px 9px;
-
-    font-size: 12px;
-  }
-}
-
-/* =========================
    SIGN OUT
    ========================= */
 
 .app-navbar-signout {
   margin-left: 8px;
+
   padding: 9px 13px;
 
   border: 1px solid var(--ochre);
@@ -151,9 +136,33 @@
   color: var(--white);
 }
 
+
+/* =========================
+   MOBILE
+   ========================= */
+
 @media (max-width: 650px) {
+  .app-navbar {
+    padding: 0 4%;
+  }
+
+  .app-navbar-logo {
+    font-size: 17px;
+  }
+
+  .app-navbar-links {
+    gap: 2px;
+  }
+
+  .app-navbar-link {
+    padding: 8px 9px;
+
+    font-size: 12px;
+  }
+
   .app-navbar-signout {
     margin-left: 2px;
+
     padding: 8px 9px;
 
     font-size: 12px;

@@ -1,5 +1,5 @@
-import { NavLink, useNavigate } from "react-router";
 import { signOut } from "firebase/auth";
+import { NavLink, useNavigate } from "react-router";
 
 import { auth } from "../firebase";
 
@@ -33,15 +33,15 @@ function AppNavbar() {
   return (
     <header className="app-navbar">
 
-      {/* LOGO / LANDING PAGE */}
+      {/* LOGO */}
 
       <NavLink
         to="/"
         className="app-navbar-logo"
-        aria-label="Go to landing page"
+        aria-label="Go to discovery page"
       >
         <span>CHUM</span>
-        <strong>BUDDY</strong>
+        <strong>BUDDIES</strong>
       </NavLink>
 
 
@@ -51,6 +51,7 @@ function AppNavbar() {
         className="app-navbar-links"
         aria-label="Main navigation"
       >
+
         <NavLink
           to="/profile"
           className={({ isActive }) =>
@@ -61,6 +62,7 @@ function AppNavbar() {
         >
           Profile
         </NavLink>
+
 
         <NavLink
           to="/friends"
@@ -73,8 +75,9 @@ function AppNavbar() {
           Friends
         </NavLink>
 
+
         <NavLink
-          to="/chats"
+          to="/messages"
           className={({ isActive }) =>
             isActive
               ? "app-navbar-link active"
@@ -84,6 +87,7 @@ function AppNavbar() {
           Chats
         </NavLink>
 
+
         <button
           type="button"
           className="app-navbar-signout"
@@ -91,6 +95,7 @@ function AppNavbar() {
         >
           Sign out
         </button>
+
       </nav>
 
     </header>
