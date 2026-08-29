@@ -45,42 +45,8 @@ function LoginPage() {
   async function handleSignUp() {
     setError("");
 
-    const validUsydEmail = email
-      .toLowerCase()
-      .endsWith("@uni.sydney.edu.au");
-
-    if (!validUsydEmail) {
-      setError("Please enter a valid University of Sydney email to sign up.");
-      return;
-    }
-
-    if (password.length < 6) {
-      setError("Password must contain at least 6 characters for sign up.");
-      return;
-    }
-
-    try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      const user = userCredential.user;
-
-      // Create an initial document in Firestore for the new user
-      await setDoc(doc(db, "users", user.uid), {
-        name: email.split("@")[0],
-        pronouns: "",
-        bio: "",
-        degree: "",
-        major: "",
-        second_major_minor: "",
-        languages: ["English"],
-        interests: [],
-        societies: [],
-        profilePicture: null,
-      });
-
-      navigate("/profile");
-    } catch (err) {
-      setError(err.message);
-    }
+    // Signup page will be connected later.
+    navigate("/signup");
   }
 
   return (
