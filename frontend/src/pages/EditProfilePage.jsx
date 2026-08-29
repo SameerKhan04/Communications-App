@@ -180,7 +180,7 @@ function EditProfilePage() {
       <header className="profile-navbar">
         <div className="profile-logo">
           <span>CHUM</span>
-          <strong>BUCKET</strong>
+          <strong>BUDDY</strong>
         </div>
         <span className="profile-nav-title">Edit Profile</span>
       </header>
@@ -189,7 +189,7 @@ function EditProfilePage() {
         <section className="profile-heading">
           <p className="profile-eyebrow">EDIT YOUR PROFILE</p>
           <h1>Tell people who you are.</h1>
-          <p>Update how you appear to other students on Chum Bucket.</p>
+          <p>Update how you appear to other students on Chum Buddy.</p>
         </section>
 
         <form className="profile-form" onSubmit={handleSave}>
