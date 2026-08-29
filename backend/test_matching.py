@@ -1,5 +1,5 @@
-from ..main import get_matches
-from ..database import mock_users
+from main import get_matches
+from database import mock_users
 
 def test_one_user_match():
     initial_user = mock_users[0]
