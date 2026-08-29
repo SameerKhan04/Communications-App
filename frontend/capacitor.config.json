@@ -1,0 +1,8 @@
+{
+  "appId": "com.example.chumbuddies",
+  "appName": "ChumBuddies",
+  "webDir": "dist",
+  "server": {
+    "androidScheme": "https"
+  }
+}
