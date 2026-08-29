@@ -4,7 +4,6 @@ import { doc, getDoc } from "firebase/firestore";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { auth, db } from "../firebase";
-
 import "./ProfilePage.css";
 
 function ProfilePage() {
@@ -88,6 +87,7 @@ function ProfilePage() {
             >
               Edit profile
             </button>
+
           </div>
 
           {(profile.degree || profile.major || profile.second_major_minor) && (
