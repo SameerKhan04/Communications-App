@@ -1,9 +1,9 @@
 // src/pages/EditProfilePage.jsx
 
+import { doc, getDoc, setDoc } from "firebase/firestore";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { auth, db } from "../firebase";
-import { doc, getDoc, setDoc } from "firebase/firestore";
 
 import "./EditProfilePage.css";
 
@@ -18,6 +18,17 @@ const PREMADE_LANGUAGES = [
 const PREMADE_SOCIETIES = [
   "SYNCS", "DataSoc", "PMSoc", "BoulderSoc", "ChairSoc",
 ];
+
+// Mapping map linking interest keywords to suggested societies
+const INTEREST_SOCIETY_MAP = {
+  "Coding": ["SYNCS"],
+  "DataSoc": ["DataSoc"],
+  "Gaming": ["SYNCS"],
+  "Gym": ["BoulderSoc", "ChairSoc"],
+  "Running": ["BoulderSoc"],
+  "Startups": ["PMSoc"],
+  "Design": ["SYNCS"],
+};
 
 function EditProfilePage() {
   const navigate = useNavigate();
@@ -36,6 +47,13 @@ function EditProfilePage() {
   const [customInterest, setCustomInterest] = useState("");
   const [societies, setSocieties] = useState([]);
   const [customSociety, setCustomSociety] = useState("");
+
+  // Automatically compute suggested societies based on currently selected interests
+  const suggestedSocieties = Array.from(
+    new Set(
+      interests.flatMap((interest) => INTEREST_SOCIETY_MAP[interest] || [])
+    )
+  ).filter((soc) => !societies.includes(soc));
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(async (user) => {
@@ -97,6 +115,10 @@ function EditProfilePage() {
       setLanguages([...languages, cleaned]);
     }
     setCustomLanguage("");
+  }
+
+  function removeLanguage(language) {
+    setLanguages(languages.filter((l) => l !== language));
   }
 
   function toggleInterest(interest) {
@@ -337,6 +359,19 @@ function EditProfilePage() {
               />
               <button type="button" onClick={addCustomLanguage}>Add</button>
             </div>
+
+            {languages.length > 0 && (
+              <div className="profile-selected-section">
+                <p>Your languages</p>
+                <div className="profile-selected-tags">
+                  {languages.map((language) => (
+                    <button key={language} type="button" onClick={() => removeLanguage(language)}>
+                      {language} <span>×</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </section>
 
           {/* INTERESTS */}
@@ -401,6 +436,28 @@ function EditProfilePage() {
                 <p>Select societies you're part of or add your own.</p>
               </div>
             </div>
+
+            {/* SUGGESTED SOCIETIES BASED ON INTERESTS */}
+            {suggestedSocieties.length > 0 && (
+              <div style={{ marginBottom: "16px", padding: "12px", background: "rgba(238, 108, 77, 0.08)", borderRadius: "12px" }}>
+                <p style={{ fontSize: "0.85rem", fontWeight: "bold", marginBottom: "8px", color: "var(--ochre)" }}>
+                  Suggested based on your interests:
+                </p>
+                <div className="profile-option-grid">
+                  {suggestedSocieties.map((society) => (
+                    <button
+                      key={`suggested-${society}`}
+                      type="button"
+                      className="profile-option-chip"
+                      style={{ borderStyle: "dashed" }}
+                      onClick={() => toggleSociety(society)}
+                    >
+                      + {society}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <div className="profile-option-grid">
               {PREMADE_SOCIETIES.map((society) => (
