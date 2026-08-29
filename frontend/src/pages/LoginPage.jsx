@@ -1,5 +1,10 @@
+// src/pages/LoginPage.jsx
+
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from "firebase/auth";
+import { doc, setDoc } from "firebase/firestore";
 import { useState } from "react";
 import { useNavigate } from "react-router";
+import { auth, db } from "../firebase";
 
 import "./LoginPage.css";
 
@@ -10,7 +15,7 @@ function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
 
-  function handleSignIn(event) {
+  async function handleSignIn(event) {
     event.preventDefault();
 
     const validUsydEmail = email
@@ -18,36 +23,64 @@ function LoginPage() {
       .endsWith("@uni.sydney.edu.au");
 
     if (!validUsydEmail) {
-      setError(
-        "Please enter a valid University of Sydney email.",
-      );
+      setError("Please enter a valid University of Sydney email.");
       return;
     }
 
     if (password.length < 6) {
-      setError(
-        "Password must contain at least 6 characters.",
-      );
+      setError("Password must contain at least 6 characters.");
       return;
     }
 
     setError("");
 
-    console.log("Prototype sign in:", {
-      email,
-      password,
-    });
-
-    // Temporary frontend-only behaviour.
-    // Later authentication can replace this.
-    navigate("/profile");
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+      navigate("/profile");
+    } catch (err) {
+      setError(err.message);
+    }
   }
 
-  function handleSignUp() {
+  async function handleSignUp() {
     setError("");
 
-    // Signup page will be connected later.
-    alert("Sign up page coming soon.");
+    const validUsydEmail = email
+      .toLowerCase()
+      .endsWith("@uni.sydney.edu.au");
+
+    if (!validUsydEmail) {
+      setError("Please enter a valid University of Sydney email to sign up.");
+      return;
+    }
+
+    if (password.length < 6) {
+      setError("Password must contain at least 6 characters for sign up.");
+      return;
+    }
+
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+
+      // Create an initial document in Firestore for the new user
+      await setDoc(doc(db, "users", user.uid), {
+        name: email.split("@")[0],
+        pronouns: "",
+        bio: "",
+        degree: "",
+        major: "",
+        second_major_minor: "",
+        languages: ["English"],
+        interests: [],
+        societies: [],
+        profilePicture: null,
+      });
+
+      navigate("/profile");
+    } catch (err) {
+      setError(err.message);
+    }
   }
 
   return (
@@ -57,18 +90,11 @@ function LoginPage() {
 
       <section className="login-container">
         <div className="brand-section">
-          <p className="brand-label">
-            UNIVERSITY OF SYDNEY
-          </p>
+          <p className="brand-label">UNIVERSITY OF SYDNEY</p>
 
           <h1 className="brand-name">
-            <span className="brand-white">
-              CHUM
-            </span>
-
-            <span className="brand-black">
-              BUCKET
-            </span>
+            <span className="brand-white">CHUM</span>
+            <span className="brand-black">BUCKET</span>
           </h1>
 
           <p className="brand-description">
@@ -80,22 +106,14 @@ function LoginPage() {
 
         <div className="login-card">
           <div className="card-heading">
-            <p className="small-heading">
-              WELCOME BACK
-            </p>
-
+            <p className="small-heading">WELCOME BACK</p>
             <h2>Sign in</h2>
-
-            <p>
-              Connect with students across campus.
-            </p>
+            <p>Connect with students across campus.</p>
           </div>
 
           <form onSubmit={handleSignIn}>
             <div className="login-form-group">
-              <label htmlFor="email">
-                University email
-              </label>
+              <label htmlFor="email">University email</label>
 
               <input
                 id="email"
@@ -112,9 +130,7 @@ function LoginPage() {
             </div>
 
             <div className="login-form-group">
-              <label htmlFor="password">
-                Password
-              </label>
+              <label htmlFor="password">Password</label>
 
               <input
                 id="password"
@@ -130,16 +146,9 @@ function LoginPage() {
               />
             </div>
 
-            {error && (
-              <p className="error-message">
-                {error}
-              </p>
-            )}
+            {error && <p className="error-message">{error}</p>}
 
-            <button
-              className="sign-in-button"
-              type="submit"
-            >
+            <button className="sign-in-button" type="submit">
               Sign in
             </button>
           </form>
@@ -159,8 +168,7 @@ function LoginPage() {
           </button>
 
           <p className="account-note">
-            New to Chum Bucket? Create an account
-            using your University of Sydney email.
+            New to Chum Bucket? Create an account using your University of Sydney email.
           </p>
         </div>
       </section>
