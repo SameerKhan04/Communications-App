@@ -9,6 +9,7 @@ import ProfilePage from "./pages/ProfilePage";
 import EditProfilePage from "./pages/EditProfilePage";
 import UserProfilePage from "./pages/UserProfilePage";
 import "./App.css";
+import New_signup from "./pages/New_signup.jsx";
 
 function App() {
   return (
@@ -40,11 +41,17 @@ function App() {
         path="/users/:userId"
         element={<UserProfilePage />}
       />
+        {/*signup*/}
+        <Route
+        path="/signup"
+        element={<New_signup />}
+        />
 
       <Route
         path="*"
         element={<Navigate to="/login" replace />}
       />
+
     </Routes>
   );
 }

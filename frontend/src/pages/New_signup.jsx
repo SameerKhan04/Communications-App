@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import "./App.css";
-
+import "./New_signup.css";
+import PasswordInput from "../PasswordInput.jsx";
 
 const INTERESTS = [
   "Gaming",
@@ -22,10 +22,8 @@ const INTERESTS = [
 ];
 
 
-function App() {
-  const [page, setPage] = useState("login");
-
-
+function New_signup() {
+  const [page, setPage] = useState("signup");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [username, setUsername] = useState("");
@@ -38,139 +36,29 @@ function App() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
 
-
-  // --------------------------------------------------
-  // LOGIN
-  // --------------------------------------------------
-
-
-  function handleSignIn(event) {
-    event.preventDefault();
-
-
-    const validUsydEmail = loginEmail
-      .toLowerCase()
-      .endsWith("@uni.sydney.edu.au");
-
-
-    if (!validUsydEmail) {
-      setError("Please enter a valid University of Sydney email.");
-      return;
-    }
-
-
-    if (password.length < 6) {
-      setError("Password must contain at least 6 characters.");
-      return;
-    }
-
-
-    setError("");
-
-
-    // Authentication will be connected later.
-    setPage("home");
-  }
-
-
   // --------------------------------------------------
   // SIGN UP
   // --------------------------------------------------
+  const handleSubmit = (e) => {
+    // Prevent standard browser page reload
+    e.preventDefault();
+    setError('');
 
+    // Handle authentication logic here
+    console.log("Signing up with:", { email, password });
+  };
 
   function handleSignUp() {
     setError("");
     setPage("signup");
   }
 
-
-  function handleRegistrationSubmit(event) {
-    event.preventDefault();
-
-
-    const validUsydEmail = email
-      .toLowerCase()
-      .endsWith("@uni.sydney.edu.au");
-
-
-    if (!validUsydEmail) {
-      setError("Please use your University of Sydney email.");
-      return;
-    }
-
-
-    if (phone.trim().length < 8) {
-      setError("Please enter a valid phone number.");
-      return;
-    }
-
-
-    if (username.trim().length < 3) {
-      setError("Username must be at least 3 characters.");
-      return;
-    }
-
-
-    setError("");
-    setPage("interests");
-  }
-
-
   // --------------------------------------------------
-  // INTERESTS
+  // REGISTRATION PAGE
   // --------------------------------------------------
 
 
-  function toggleInterest(interest) {
-    setSelectedInterests((current) => {
-      if (current.includes(interest)) {
-        return current.filter((item) => item !== interest);
-      }
-
-
-      return [...current, interest];
-    });
-  }
-
-
-  function finishRegistration() {
-    if (selectedInterests.length === 0) {
-      setError("Please choose at least one interest.");
-      return;
-    }
-
-
-    setError("");
-    setPage("success");
-  }
-
-
-  // --------------------------------------------------
-  // SUCCESS SCREEN
-  // --------------------------------------------------
-
-
-  useEffect(() => {
-    if (page !== "success") {
-      return;
-    }
-
-
-    const timer = setTimeout(() => {
-      setPage("home");
-    }, 4000);
-
-
-    return () => clearTimeout(timer);
-  }, [page]);
-
-
-  // --------------------------------------------------
-  // LOGIN PAGE
-  // --------------------------------------------------
-
-
-  if (page === "login") {
+  if (page === "signup") {
     return (
       <main className="login-page">
         <div className="background-decoration decoration-one" />
@@ -198,299 +86,44 @@ function App() {
 
           <div className="login-card">
             <div className="card-heading">
-              <p className="small-heading">WELCOME BACK</p>
-              <h2>Sign in</h2>
+              <h2>Sign Up</h2>
               <p>Connect with students across campus.</p>
+              <form onSubmit={handleSubmit} className="signup-form">
+                {/* Email Field */}
+                <div className="form-group">
+                  <label htmlFor="email">Email</label>
+                  <input
+                    id="email"
+                    type="email"
+                    className="signup-input"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="name@example.com"
+                    required
+                  />
+                </div>
+
+                {/* Password Field */}
+                <div className="form-group">
+                  <label htmlFor="password">Password</label>
+                  <PasswordInput
+                    id="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Create a strong password"
+                  />
+                </div>
+
+                {/* Submit Button */}
+                <button type="submit" className="signup-submit-btn">
+                  Sign Up
+                </button>
+              </form>
             </div>
-
-
-            <form onSubmit={handleSignIn}>
-              <div className="form-group">
-                <label htmlFor="login-email">University email</label>
-
-
-                <input
-                  id="login-email"
-                  type="email"
-                  placeholder="unikey@uni.sydney.edu.au"
-                  value={loginEmail}
-                  onChange={(event) => {
-                    setLoginEmail(event.target.value);
-                    setError("");
-                  }}
-                  autoComplete="email"
-                  required
-                />
-              </div>
-
-
-              <div className="form-group">
-                <label htmlFor="login-password">Password</label>
-
-
-                <input
-                  id="login-password"
-                  type="password"
-                  placeholder="Enter your password"
-                  value={password}
-                  onChange={(event) => {
-                    setPassword(event.target.value);
-                    setError("");
-                  }}
-                  autoComplete="current-password"
-                  required
-                />
-              </div>
-
-
-              {error && <p className="error-message">{error}</p>}
-
-
-              <button className="sign-in-button" type="submit">
-                Sign in
-              </button>
-            </form>
-
-
-            <div className="divider">
-              <span />
-              <p>OR</p>
-              <span />
-            </div>
-
-
-            <button
-              className="sign-up-button"
-              type="button"
-              onClick={handleSignUp}
-            >
-              Sign up
-            </button>
-
-
             <p className="account-note">
               New to Chum Bucket? Create an account using your
               University of Sydney email.
             </p>
-          </div>
-        </section>
-      </main>
-    );
-  }
-
-
-  // --------------------------------------------------
-  // REGISTRATION PAGE
-  // --------------------------------------------------
-
-
-  if (page === "signup") {
-    return (
-      <main className="signup-page">
-        <section className="signup-card">
-          <div className="signup-progress">
-            <span className="progress-dot active" />
-            <span className="progress-line" />
-            <span className="progress-dot" />
-          </div>
-
-
-          <div className="signup-heading">
-            <p className="small-heading">LET'S GET STARTED</p>
-            <h1>Create your account</h1>
-            <p>
-              A few details and you'll be ready to meet your new
-              university chums.
-            </p>
-          </div>
-
-
-          <form onSubmit={handleRegistrationSubmit}>
-            <div className="form-group">
-              <label htmlFor="signup-email">University email</label>
-
-
-              <input
-                id="signup-email"
-                type="email"
-                placeholder="unikey@uni.sydney.edu.au"
-                value={email}
-                onChange={(event) => {
-                  setEmail(event.target.value);
-                  setError("");
-                }}
-                required
-              />
-            </div>
-
-
-            <div className="form-group">
-              <label htmlFor="signup-phone">Phone number</label>
-
-
-              <input
-                id="signup-phone"
-                type="tel"
-                placeholder="04XX XXX XXX"
-                value={phone}
-                onChange={(event) => {
-                  setPhone(event.target.value);
-                  setError("");
-                }}
-                required
-              />
-            </div>
-
-
-            <div className="form-group">
-              <label htmlFor="signup-username">Username</label>
-
-
-              <input
-                id="signup-username"
-                type="text"
-                placeholder="Choose a username"
-                value={username}
-                onChange={(event) => {
-                  setUsername(event.target.value);
-                  setError("");
-                }}
-                minLength={3}
-                required
-              />
-            </div>
-
-
-            {error && <p className="error-message">{error}</p>}
-
-
-            <button className="primary-button" type="submit">
-              Continue
-            </button>
-          </form>
-
-
-          <button
-            className="back-button"
-            type="button"
-            onClick={() => setPage("login")}
-          >
-            ← Back to sign in
-          </button>
-        </section>
-      </main>
-    );
-  }
-
-
-  // --------------------------------------------------
-  // INTEREST SELECTION
-  // --------------------------------------------------
-
-
-  if (page === "interests") {
-    return (
-      <main className="interests-page">
-        <section className="interests-card">
-          <div className="signup-progress">
-            <span className="progress-dot completed">✓</span>
-            <span className="progress-line completed" />
-            <span className="progress-dot active" />
-          </div>
-
-
-          <div className="signup-heading">
-            <p className="small-heading">MAKE IT YOURS</p>
-            <h1>What are you into?</h1>
-            <p>
-              Pick a few things you enjoy. We'll use these to help
-              you find people with similar interests.
-            </p>
-          </div>
-
-
-          <div className="interest-grid">
-            {INTERESTS.map((interest) => {
-              const selected = selectedInterests.includes(interest);
-
-
-              return (
-                <button
-                  key={interest}
-                  type="button"
-                  className={`interest-button ${
-                    selected ? "selected" : ""
-                  }`}
-                  onClick={() => toggleInterest(interest)}
-                >
-                  {selected && <span className="interest-check">✓</span>}
-                  {interest}
-                </button>
-              );
-            })}
-          </div>
-
-
-          <p className="interest-count">
-            {selectedInterests.length}{" "}
-            {selectedInterests.length === 1 ? "interest" : "interests"} selected
-          </p>
-
-
-          {error && <p className="error-message">{error}</p>}
-
-
-          <button
-            className="primary-button"
-            type="button"
-            onClick={finishRegistration}
-          >
-            Finish
-          </button>
-
-
-          <button
-            className="back-button"
-            type="button"
-            onClick={() => setPage("signup")}
-          >
-            ← Back
-          </button>
-        </section>
-      </main>
-    );
-  }
-
-
-  // --------------------------------------------------
-  // SUCCESS MESSAGE
-  // --------------------------------------------------
-
-
-  if (page === "success") {
-    return (
-      <main className="success-page">
-        <section className="success-card">
-          <div className="success-icon">✓</div>
-
-
-          <p className="small-heading">WELCOME TO CHUM BUCKET</p>
-
-
-          <h1>
-            Hay, you're all
-            <br />
-            ready to go.
-          </h1>
-
-
-          <p>
-            Hope you find who you're looking for!
-          </p>
-
-
-          <div className="success-loader">
-            <span />
           </div>
         </section>
       </main>
@@ -543,4 +176,4 @@ function App() {
 }
 
 
-export default App;
+export default New_signup;

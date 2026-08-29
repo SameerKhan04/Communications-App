@@ -47,7 +47,7 @@ function LoginPage() {
     setError("");
 
     // Signup page will be connected later.
-    alert("Sign up page coming soon.");
+    navigate("/signup");
   }
 
   return (
