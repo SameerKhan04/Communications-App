@@ -14,7 +14,7 @@ function Friends() {
   const [loading, setLoading] = useState(true);
 
   // -----------------------------------------
-  // LOAD FRIENDS FROM FIREBASE
+  // LOAD FRIENDS FROM SWIPES / MUTUAL MATCHES
   // -----------------------------------------
 
   useEffect(() => {
@@ -25,27 +25,38 @@ function Friends() {
       }
 
       try {
-        const currentUserRef = doc(db, "users", user.uid);
-        const currentUserSnapshot = await getDoc(currentUserRef);
+        const swipesRef = collection(db, "swipes");
 
-        if (!currentUserSnapshot.exists()) {
+        // 1. Get all swipes TO current user where decision is "interested"
+        const toMeSnap = await getDocs(query(swipesRef, where("toUserId", "==", user.uid)));
+        const whoLikedMe = [];
+        toMeSnap.forEach(docSnap => {
+          const data = docSnap.data();
+          if (data.decision === "interested") {
+            whoLikedMe.push(data.fromUserId);
+          }
+        });
+
+        // 2. Get all swipes FROM current user where decision is "interested"
+        const fromMeSnap = await getDocs(query(swipesRef, where("fromUserId", "==", user.uid)));
+        const whoILiked = {};
+        fromMeSnap.forEach(docSnap => {
+          const data = docSnap.data();
+          whoILiked[data.toUserId] = data.decision;
+        });
+
+        // 3. Find mutual matches (Intersection)
+        const mutualMatchIds = whoLikedMe.filter(id => whoILiked[id] === "interested");
+
+        if (mutualMatchIds.length === 0) {
           setFriends([]);
           setLoading(false);
           return;
         }
 
-        const currentUserData = currentUserSnapshot.data();
-        const friendIds = currentUserData.friends || [];
-
-        if (friendIds.length === 0) {
-          setFriends([]);
-          setLoading(false);
-          return;
-        }
-
-        // Load each friend's profile
+        // 4. Load each mutual match's profile
         const friendProfiles = await Promise.all(
-          friendIds.map(async (friendId) => {
+          mutualMatchIds.map(async (friendId) => {
             const friendRef = doc(db, "users", friendId);
             const friendSnapshot = await getDoc(friendRef);
 
@@ -77,7 +88,7 @@ function Friends() {
         // Remove deleted / invalid users
         setFriends(friendProfiles.filter(Boolean));
       } catch (error) {
-        console.error("Error loading friends:", error);
+        console.error("Error loading mutual matches as friends:", error);
         setFriends([]);
       } finally {
         setLoading(false);
@@ -281,7 +292,7 @@ function Friends() {
               <h2>No chums found</h2>
               <p>
                 {friends.length === 0 
-                  ? "You haven't added any friends yet. Get out there and meet some people!" 
+                  ? "You haven't matched with anyone yet. Head over to Matches to connect!" 
                   : "Try searching for a different name, degree, or interest."}
               </p>
             </div>

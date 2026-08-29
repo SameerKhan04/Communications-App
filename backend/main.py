@@ -1,23 +1,22 @@
-from database import mock_users
-import requests
 import pathlib as pl
+from typing import Any, Dict, List
+
+import requests
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-# Initialise our FastAPI web server
 app = FastAPI(title="Chum Buddies")
 
-
-# Define what incoming chat/translation data should look like
+# Define expected data structures
 class Message(BaseModel):
     text: str
-    
 
-# Define the origins that are allowed to make cross-origin requests.
-# Using ["*"] is a standard shortcut in local development to allow any origin.
+class MatchRequest(BaseModel):
+    target_user: Dict[str, Any]
+    all_users: List[Dict[str, Any]]
+
 origins = ["*"]
-
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
@@ -29,12 +28,10 @@ app.add_middleware(
 # 1. MATCHING ALGORITHM (JACCARD SIMILARITY)
 
 def calculate_jaccard(list1, list2):
-    """
-    Compares two lists (like societies or languages).
-    Formula: Shared items divided by Total unique items.
-    Returns a score between 0.0 (no overlap) and 1.0 (exact match).
-    """
-    set1, set2 = set(list1), set(list2)
+    """Compares two lists. Returns score 0.0 (no overlap) to 1.0 (exact match)."""
+    set1 = set(list1) if list1 else set()
+    set2 = set(list2) if list2 else set()
+    
     shared_items = len(set1.intersection(set2))
     total_unique_items = len(set1.union(set2))
     
@@ -42,81 +39,56 @@ def calculate_jaccard(list1, list2):
         return 0.0
     return shared_items / total_unique_items
 
-
 def get_matches(target_user, all_users):
-    """
-    Takes one student and compares them against everyone else in the database.
-    Ranks them from highest compatibility to lowest.
-    """
+    """Scores compatibility against actual Firebase user data."""
     scored_matches = []
 
     for user in all_users:
-        # Don't match the user with themselves
-        if user["id"] == target_user["id"]:
+        if user.get("id") == target_user.get("id"):
             continue
 
-        # 1. Base Score: Shared society overlap (0.0 to 1.0)
-        score = calculate_jaccard(target_user["societies"], user["societies"])
+        score = 0.0
+        
+        # 1. Base Score: Shared interests (40% weight)
+        score += calculate_jaccard(target_user.get("interests"), user.get("interests")) * 0.4
+        
+        # 2. Bonus: Shared societies (30% weight)
+        score += calculate_jaccard(target_user.get("societies"), user.get("societies")) * 0.3
+        
+        # 3. Bonus: Shared languages (10% weight)
+        score += calculate_jaccard(target_user.get("languages"), user.get("languages")) * 0.1
 
-        # 2. Bonus: Same degree (+0.3)
-        if target_user["degree"] == user["degree"]:
-            score += 0.3
-
-        # 3. Bonus: Same proximity to campus (+0.2)
-        if target_user["proximity"] == user["proximity"]:
+        # 4. Bonus: Same Degree (+0.2 flat bonus)
+        target_degree = target_user.get("degree", "").lower().strip()
+        user_degree = user.get("degree", "").lower().strip()
+        if target_degree and user_degree and target_degree == user_degree:
             score += 0.2
 
-        # 4. Bonus: Matching hangout preference (+0.2)
-        if target_user["hangout_pref"] == user["hangout_pref"]:
-            score += 0.2
-
-        # Ensure score doesn't exceed 1.0 (100% match)
         final_score = min(score, 1.0)
 
-        # Only include people who have at least some overlap
-        if final_score > 0:
-            scored_matches.append({
-                "user": user,
-                "match_score": round(final_score, 2)
-            })
+        # Append the calculated score back into the user dictionary
+        user_data = user.copy()
+        user_data["match_score"] = round(final_score, 2)
+        scored_matches.append(user_data)
 
     # Sort results so highest match score appears at the top
-    return sorted(scored_matches, key=lambda item: item["match_score"], reverse=True)
+    return sorted(scored_matches, key=lambda item: item.get("match_score", 0), reverse=True)
 
 
-# 2. API ENDPOINTS (ROUTES FOR THE FRONTEND)
+# 2. API ENDPOINTS
 
-@app.get("/api/users")
-async def get_all_users():
-    """Returns the full list of students for search and filter screens."""
-    return mock_users
-
-
-@app.get("/api/match/{user_id}")
-async def match_user(user_id: str):
-    """Finds ranked recommendations for a specific user ID."""
-    # Find the target student in our mock database
-    target_user = next((u for u in mock_users if u["id"] == user_id), None)
-    
-    # Return an error message if the ID does not exist
-    if not target_user:
-        return {"error": "User not found"}
-
-    # Run the matching algorithm and return the results
-    matches = get_matches(target_user, mock_users)
-    return {
-        "target": target_user,
-        "matches": matches
-    }
-
+@app.post("/api/match")
+async def match_users(request: MatchRequest):
+    """Takes Firebase users from React and returns a sorted array of matches."""
+    matches = get_matches(request.target_user, request.all_users)
+    return {"matches": matches}
 
 @app.post("/api/translate")
-async def translate_placeholder(message: Message, src_lang, dest_lang):
+async def translate_placeholder(message: Message, src_lang: str, dest_lang: str):
     """Placeholder endpoint for the live translation feature."""
     original_text = message.text
-
     url = "https://translation.googleapis.com/language/translate/v2"
-
+    
     request_body = {
         "q": original_text,
         "source": src_lang,
@@ -124,16 +96,14 @@ async def translate_placeholder(message: Message, src_lang, dest_lang):
         "format": "text"
     }
 
-    api_path = pl.Path(__file__).resolve().parent
-    api_path = api_path / "api" / "api_key.txt"
-    with open(api_path) as f:
-        API_KEY = f.readline().strip("\n")
+    try:
+        api_path = pl.Path(__file__).resolve().parent / "api" / "api_key.txt"
+        with open(api_path) as f:
+            API_KEY = f.readline().strip("\n")
 
-    r = requests.post(url, headers={"X-goog-api-key": API_KEY, "Content-Type": "application/json"}, json=request_body)
-    return_data = r.json()
-    translated_text = return_data["data"]["translations"][0]["translatedText"]
-
-    return {
-        "original": original_text,
-        "translated": translated_text
-    }
+        r = requests.post(url, headers={"X-goog-api-key": API_KEY, "Content-Type": "application/json"}, json=request_body)
+        return_data = r.json()
+        translated_text = return_data["data"]["translations"][0]["translatedText"]
+        return {"original": original_text, "translated": translated_text}
+    except Exception as e:
+        return {"error": str(e)}
