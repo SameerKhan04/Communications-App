@@ -1,8 +1,40 @@
-import { useState, useEffect } from "react";
+import { addDoc, arrayUnion, collection, doc, getDoc, getDocs, onSnapshot, query, serverTimestamp, updateDoc, where } from "firebase/firestore";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { auth, db } from "../firebase";
-import { collection, query, where, onSnapshot, getDocs, doc, getDoc, updateDoc, arrayUnion, addDoc, serverTimestamp } from "firebase/firestore";
 import "./Messages.css";
+
+// Helper component to fetch and display the friend's actual name in the inbox
+function ChatRow({ chat, onClick }) {
+  const [otherUser, setOtherUser] = useState(null);
+  const otherUserId = chat.participants.find(id => id !== auth.currentUser?.uid);
+
+  useEffect(() => {
+    if (!otherUserId) return;
+    getDoc(doc(db, "users", otherUserId)).then(snap => {
+      if (snap.exists()) setOtherUser(snap.data());
+    });
+  }, [otherUserId]);
+
+  const name = otherUser?.name || `User ${otherUserId?.substring(0, 5)}...`;
+  const avatar = otherUser?.profilePicture ? (
+    <img src={otherUser.profilePicture} alt={name} style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
+  ) : (
+    name.charAt(0).toUpperCase()
+  );
+
+  return (
+    <div className="chat-row" onClick={onClick}>
+      <div className="chat-row-avatar" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        {avatar}
+      </div>
+      <div className="chat-row-details">
+        <strong>{name}</strong>
+        <p>{chat.lastMessage}</p>
+      </div>
+    </div>
+  );
+}
 
 function MessagesPage() {
   const navigate = useNavigate();
@@ -53,7 +85,6 @@ function MessagesPage() {
       return setModalError("You can't add yourself!");
     }
 
-    // Find user by email
     const usersRef = collection(db, "users");
     const q = query(usersRef, where("email", "==", friendEmail.toLowerCase()));
     const snapshot = await getDocs(q);
@@ -64,7 +95,6 @@ function MessagesPage() {
 
     const newFriend = snapshot.docs[0];
     
-    // Add to current user's friends array
     await updateDoc(doc(db, "users", currentUser.uid), {
       friends: arrayUnion(newFriend.id)
     });
@@ -76,13 +106,11 @@ function MessagesPage() {
   async function startChat(friendId) {
     const currentUser = auth.currentUser;
     
-    // Check if chat already exists
     const existingChat = chats.find(c => c.participants.includes(friendId));
     if (existingChat) {
       return navigate(`/messages/${existingChat.id}`);
     }
 
-    // Create new chat
     const newChat = await addDoc(collection(db, "chats"), {
       participants: [currentUser.uid, friendId],
       updatedAt: serverTimestamp(),
@@ -111,19 +139,9 @@ function MessagesPage() {
           {chats.length === 0 ? (
             <p className="empty-state">No messages yet. Start a chat!</p>
           ) : (
-            chats.map(chat => {
-              // Get the ID of the *other* person in the chat
-              const otherUserId = chat.participants.find(id => id !== auth.currentUser?.uid);
-              return (
-                <div key={chat.id} className="chat-row" onClick={() => navigate(`/messages/${chat.id}`)}>
-                  <div className="chat-row-avatar">?</div>
-                  <div className="chat-row-details">
-                    <strong>User {otherUserId?.substring(0, 5)}...</strong>
-                    <p>{chat.lastMessage}</p>
-                  </div>
-                </div>
-              );
-            })
+            chats.map(chat => (
+              <ChatRow key={chat.id} chat={chat} onClick={() => navigate(`/messages/${chat.id}`)} />
+            ))
           )}
         </div>
       </div>
