@@ -65,6 +65,7 @@ function LoginPage() {
 
       // Create an initial document in Firestore for the new user
       await setDoc(doc(db, "users", user.uid), {
+        email: email.toLowerCase(),
         name: email.split("@")[0],
         pronouns: "",
         bio: "",
