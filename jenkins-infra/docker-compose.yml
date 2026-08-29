@@ -1,0 +1,16 @@
+services:
+  jenkins:
+    build: .
+    container_name: jenkins-controller
+    restart: on-failure
+    user: root # Needed to access host docker socket without permission errors
+    ports:
+      - "8080:8080"   # Jenkins Web UI
+      - "50000:50000" # Jenkins Agent Port
+    volumes:
+      - jenkins_home:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock
+
+volumes:
+  jenkins_home:
+    external: false
