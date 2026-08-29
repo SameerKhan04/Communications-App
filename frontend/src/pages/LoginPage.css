@@ -8,7 +8,7 @@
   width: 100%;
   min-height: 100vh;
 
-  overflow: hidden;
+  overflow-y: auto;
 
   display: flex;
   align-items: center;
@@ -99,17 +99,13 @@
   letter-spacing: 0.22em;
 }
 
-.login-page .brand-name {
-  display: flex;
-  flex-direction: column;
+.login-page .brand-logo {
+  display: block;
+  width: 500px;
+  height: 500px;
+  object-fit: contain;
 
-  margin: 0;
-
-  font-size: clamp(64px, 8vw, 110px);
-  font-weight: 900;
-
-  line-height: 0.82;
-  letter-spacing: -0.07em;
+  margin-left: 125px;
 }
 
 .login-page .brand-white {
@@ -376,10 +372,6 @@
     align-items: flex-start;
 
     padding: 40px 18px;
-  }
-
-  .login-page .brand-name {
-    font-size: 58px;
   }
 
   .login-page .brand-description {

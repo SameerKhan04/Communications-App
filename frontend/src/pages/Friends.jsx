@@ -77,7 +77,7 @@ function Friends({ friends = MOCK_FRIENDS }) {
         <header className="friends-header">
           <div>
             <p className="friends-eyebrow">
-              CHUM BUCKET
+              CHUM BUDDY
             </p>
 
             <h1>Friends</h1>
