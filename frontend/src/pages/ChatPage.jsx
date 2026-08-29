@@ -1,32 +1,33 @@
+// src/pages/ChatPage.jsx
+
 import {
-  addDoc,
-  collection,
-  doc,
-  onSnapshot,
-  orderBy,
-  query,
-  serverTimestamp,
-  updateDoc,
+    addDoc,
+    collection,
+    doc,
+    onSnapshot,
+    orderBy,
+    query,
+    serverTimestamp,
+    updateDoc,
 } from "firebase/firestore";
 
 import {
-  useEffect,
-  useRef,
-  useState,
+    useEffect,
+    useRef,
+    useState,
 } from "react";
 
 import {
-  useNavigate,
-  useParams,
+    useNavigate,
+    useParams,
 } from "react-router";
 
 import {
-  auth,
-  db,
+    auth,
+    db,
 } from "../firebase";
 
 import "./Messages.css";
-
 
 function ChatPage() {
   const { chatId } = useParams();
@@ -35,48 +36,27 @@ function ChatPage() {
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState("");
   const [targetLanguage, setTargetLanguage] = useState("");
+  const [translations, setTranslations] = useState({});
 
   const messagesEndRef = useRef(null);
 
-
-  // -----------------------------------------
-  // LISTEN FOR CHAT MESSAGES
-  // -----------------------------------------
-
   useEffect(() => {
-    if (!chatId) {
-      return;
-    }
+    if (!chatId) return;
 
     const messagesQuery = query(
-      collection(
-        db,
-        "chats",
-        chatId,
-        "messages"
-      ),
-      orderBy(
-        "createdAt",
-        "asc"
-      )
+      collection(db, "chats", chatId, "messages"),
+      orderBy("createdAt", "asc")
     );
-
 
     const unsubscribe = onSnapshot(
       messagesQuery,
       (snapshot) => {
-        const loadedMessages =
-          snapshot.docs.map(
-            (messageDoc) => ({
-              id: messageDoc.id,
-              ...messageDoc.data(),
-            })
-          );
+        const loadedMessages = snapshot.docs.map((messageDoc) => ({
+          id: messageDoc.id,
+          ...messageDoc.data(),
+        }));
 
         setMessages(loadedMessages);
-
-
-        // Scroll to newest message
 
         setTimeout(() => {
           messagesEndRef.current?.scrollIntoView({
@@ -85,22 +65,36 @@ function ChatPage() {
         }, 100);
       },
       (error) => {
-        console.error(
-          "Error loading chat messages:",
-          error
-        );
+        console.error("Error loading chat messages:", error);
       }
     );
 
-
     return () => unsubscribe();
-
   }, [chatId]);
 
+  useEffect(() => {
+    if (!targetLanguage) {
+      return;
+    }
 
-  // -----------------------------------------
-  // SEND MESSAGE
-  // -----------------------------------------
+    messages.forEach(async (msg) => {
+      if (msg.senderId !== auth.currentUser?.uid && msg.text) {
+        try {
+          const res = await fetch("http://127.0.0.1:8000/api/translate", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ text: msg.text, target_lang: targetLanguage })
+          });
+          const data = await res.json();
+          if (data.translated) {
+            setTranslations(prev => ({ ...prev, [`${msg.id}_${targetLanguage}`]: data.translated }));
+          }
+        } catch (err) {
+          console.error("Translation request failed:", err);
+        }
+      }
+    });
+  }, [targetLanguage, messages]);
 
   async function handleSendMessage(event) {
     event.preventDefault();
@@ -108,29 +102,13 @@ function ChatPage() {
     const currentUser = auth.currentUser;
     const cleanedMessage = newMessage.trim();
 
-    if (
-      !currentUser ||
-      !chatId ||
-      !cleanedMessage
-    ) {
-      return;
-    }
-
+    if (!currentUser || !chatId || !cleanedMessage) return;
 
     setNewMessage("");
 
-
     try {
-
-      // Save message to chat subcollection
-
       await addDoc(
-        collection(
-          db,
-          "chats",
-          chatId,
-          "messages"
-        ),
+        collection(db, "chats", chatId, "messages"),
         {
           text: cleanedMessage,
           senderId: currentUser.uid,
@@ -138,216 +116,98 @@ function ChatPage() {
         }
       );
 
-
-      // Update parent chat for inbox preview
-
       await updateDoc(
-        doc(
-          db,
-          "chats",
-          chatId
-        ),
+        doc(db, "chats", chatId),
         {
           lastMessage: cleanedMessage,
           updatedAt: serverTimestamp(),
         }
       );
-
     } catch (error) {
-      console.error(
-        "Error sending message:",
-        error
-      );
-
-      // Put the message back if sending fails
-
+      console.error("Error sending message:", error);
       setNewMessage(cleanedMessage);
     }
   }
 
-
-  // -----------------------------------------
-  // PAGE
-  // -----------------------------------------
-
   return (
     <main className="chat-page">
-
       <div className="chat-toolbar">
-
-        {/* BACK */}
-
         <button
           type="button"
           className="chat-back-button"
-          onClick={() =>
-            navigate("/messages")
-          }
+          onClick={() => navigate("/messages")}
         >
-          <span aria-hidden="true">
-            ←
-          </span>
-
+          <span aria-hidden="true">←</span>
           Back to messages
         </button>
 
-
-        {/* TRANSLATION */}
-
         <div className="translation-toggle">
-
-          <label htmlFor="translation-language">
-            Translate
-          </label>
-
+          <label htmlFor="translation-language">Translate</label>
           <select
             id="translation-language"
             value={targetLanguage}
-            onChange={(event) =>
-              setTargetLanguage(
-                event.target.value
-              )
-            }
+            onChange={(event) => setTargetLanguage(event.target.value)}
           >
-            <option value="">
-              Off
-            </option>
-
-            <option value="es">
-              Spanish
-            </option>
-
-            <option value="fr">
-              French
-            </option>
-
-            <option value="zh">
-              Chinese
-            </option>
-
-            <option value="ar">
-              Arabic
-            </option>
-
-            <option value="hi">
-              Hindi
-            </option>
+            <option value="">Off</option>
+            <option value="es">Spanish</option>
+            <option value="fr">French</option>
+            <option value="zh">Chinese</option>
+            <option value="ar">Arabic</option>
+            <option value="hi">Hindi</option>
           </select>
-
         </div>
-
       </div>
 
-
       <div className="chat-container">
-
-        {/* MESSAGE FEED */}
-
         <div className="messages-view">
-
           {messages.length === 0 ? (
-
             <div className="chat-empty-state">
-              <p>
-                No messages yet.
-              </p>
-
-              <span>
-                Say hi to start the conversation.
-              </span>
+              <p>No messages yet.</p>
+              <span>Say hi to start the conversation.</span>
             </div>
-
           ) : (
-
             messages.map((message) => {
-
-              const isMine =
-                message.senderId ===
-                auth.currentUser?.uid;
-
-
-              const translatedText =
-                targetLanguage &&
-                message.translations
-                  ? message.translations[
-                      targetLanguage
-                    ]
-                  : null;
-
+              const isMine = message.senderId === auth.currentUser?.uid;
+              const translatedText = targetLanguage && !isMine ? translations[`${message.id}_${targetLanguage}`] : null;
 
               return (
                 <div
                   key={message.id}
-                  className={
-                    `chat-bubble-wrapper ${
-                      isMine
-                        ? "mine"
-                        : "theirs"
-                    }`
-                  }
+                  className={`chat-bubble-wrapper ${isMine ? "mine" : "theirs"}`}
                 >
-
                   <div className="chat-bubble">
-
                     <p className="original-text">
-                      {message.text}
+                      {isMine ? message.text : (translatedText || message.text)}
                     </p>
 
-
-                    {translatedText && (
-                      <p className="translated-text">
-                        {translatedText}
+                    {!isMine && translatedText && translatedText !== message.text && (
+                      <p className="translated-text" style={{ fontSize: "0.75rem", opacity: 0.7, marginTop: "4px" }}>
+                        Original: {message.text}
                       </p>
                     )}
-
                   </div>
-
                 </div>
               );
             })
-
           )}
-
-
           <div ref={messagesEndRef} />
-
         </div>
 
-
-        {/* MESSAGE INPUT */}
-
-        <form
-          className="chat-input-area"
-          onSubmit={handleSendMessage}
-        >
-
+        <form className="chat-input-area" onSubmit={handleSendMessage}>
           <input
             type="text"
             placeholder="Type a message..."
             value={newMessage}
-            onChange={(event) =>
-              setNewMessage(
-                event.target.value
-              )
-            }
+            onChange={(event) => setNewMessage(event.target.value)}
             aria-label="Message"
           />
-
-
-          <button
-            type="submit"
-            disabled={!newMessage.trim()}
-          >
+          <button type="submit" disabled={!newMessage.trim()}>
             Send
           </button>
-
         </form>
-
       </div>
-
     </main>
   );
 }
-
 
 export default ChatPage;
