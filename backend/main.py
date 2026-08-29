@@ -1,5 +1,6 @@
 from database import mock_users
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 # Initialise our FastAPI web server
@@ -9,6 +10,19 @@ app = FastAPI(title="Chum Buddies")
 # Define what incoming chat/translation data should look like
 class Message(BaseModel):
     text: str
+    
+
+# Define the origins that are allowed to make cross-origin requests.
+# Using ["*"] is a standard shortcut in local development to allow any origin.
+origins = ["*"]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"], 
+    allow_headers=["*"], 
+)
 
 # 1. MATCHING ALGORITHM (JACCARD SIMILARITY)
 
