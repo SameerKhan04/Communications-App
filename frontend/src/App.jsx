@@ -6,6 +6,7 @@ import "./App.css";
 
 import ChatPage from "./pages/ChatPage";
 import EditProfilePage from "./pages/EditProfilePage";
+import Friends from "./pages/Friends";
 import LandingPage from "./pages/LandingPage";
 import LoginPage from "./pages/LoginPage";
 import MessagesPage from "./pages/MessagesPage";
@@ -26,6 +27,7 @@ function App() {
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="/profile/edit" element={<EditProfilePage />} />
         <Route path="/users/:userId" element={<UserProfilePage />} />
+        <Route path="/friends" element={<Friends />} />
         
         {/* Your Messaging Routes */}
         <Route path="/messages" element={<MessagesPage />} />
