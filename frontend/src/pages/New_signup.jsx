@@ -1,29 +1,27 @@
-// src/pages/LoginPage.jsx
+// src/pages/New_signup.jsx
 
-import { signInWithEmailAndPassword } from "firebase/auth";
+import { createUserWithEmailAndPassword } from "firebase/auth";
+import { doc, setDoc } from "firebase/firestore";
 import { useState } from "react";
 import { useNavigate } from "react-router";
-import { auth } from "../firebase";
+import { auth, db } from "../firebase";
 
-import "./LoginPage.css";
+import "./New_signup.css";
 
-function LoginPage() {
+function New_signup() {
   const navigate = useNavigate();
 
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // -----------------------------------------
-  // SIGN IN
-  // -----------------------------------------
-
-  async function handleSignIn(event) {
+  async function handleSignUp(event) {
     event.preventDefault();
+    setError("");
 
-    const validUsydEmail = email
-      .toLowerCase()
-      .endsWith("@uni.sydney.edu.au");
+    const validUsydEmail = email.toLowerCase().endsWith("@uni.sydney.edu.au");
 
     if (!validUsydEmail) {
       setError("Please enter a valid University of Sydney email.");
@@ -35,33 +33,43 @@ function LoginPage() {
       return;
     }
 
-    setError("");
+    if (name.trim().length < 2) {
+      setError("Please enter your name.");
+      return;
+    }
+
+    setIsSubmitting(true);
 
     try {
-      await signInWithEmailAndPassword(auth, email, password);
-      // Go to discovery page
-      navigate("/");
+      // 1. Create the user in Firebase Authentication
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+
+      // 2. Initialize the user's document in Firestore
+      await setDoc(doc(db, "users", user.uid), {
+        email: email.toLowerCase(),
+        name: name.trim(),
+        pronouns: "",
+        bio: "",
+        degree: "",
+        major: "",
+        second_major_minor: "",
+        languages: ["English"],
+        interests: [],
+        societies: [],
+        profilePicture: null,
+      });
+
+      // 3. Send them to the edit profile page to fill out their preferences
+      navigate("/profile/edit");
     } catch (err) {
       setError(err.message);
+      setIsSubmitting(false);
     }
   }
 
-  // -----------------------------------------
-  // SIGN UP
-  // -----------------------------------------
-
-  function handleSignUp() {
-    setError("");
-    // Redirect to the dedicated signup page your team made
-    navigate("/signup");
-  }
-
-  // -----------------------------------------
-  // PAGE
-  // -----------------------------------------
-
   return (
-    <main className="login-page">
+    <main className="login-page"> {/* Reusing login-page class for the same background styling */}
       <div className="background-decoration decoration-one" />
       <div className="background-decoration decoration-two" />
 
@@ -82,19 +90,33 @@ function LoginPage() {
           </p>
         </div>
 
-        {/* LOGIN CARD */}
+        {/* SIGN UP CARD */}
         <div className="login-card">
           <div className="card-heading">
-            <p className="small-heading">WELCOME BACK</p>
-            <h2>Sign in</h2>
-            <p>Connect with students across campus.</p>
+            <p className="small-heading">JOIN THE COMMUNITY</p>
+            <h2>Create Account</h2>
+            <p>Enter your details to get started.</p>
           </div>
 
-          {/* SIGN IN FORM */}
-          <form onSubmit={handleSignIn}>
+          {/* SIGN UP FORM */}
+          <form onSubmit={handleSignUp}>
+            <div className="login-form-group">
+              <label htmlFor="name">Preferred Name</label>
+              <input
+                id="name"
+                type="text"
+                placeholder="What should we call you?"
+                value={name}
+                onChange={(event) => {
+                  setName(event.target.value);
+                  setError("");
+                }}
+                required
+              />
+            </div>
+
             <div className="login-form-group">
               <label htmlFor="email">University email</label>
-
               <input
                 id="email"
                 type="email"
@@ -111,51 +133,45 @@ function LoginPage() {
 
             <div className="login-form-group">
               <label htmlFor="password">Password</label>
-
               <input
                 id="password"
                 type="password"
-                placeholder="Enter your password"
+                placeholder="Create a strong password"
                 value={password}
                 onChange={(event) => {
                   setPassword(event.target.value);
                   setError("");
                 }}
-                autoComplete="current-password"
+                autoComplete="new-password"
                 required
               />
             </div>
 
             {error && <p className="error-message">{error}</p>}
 
-            <button className="sign-in-button" type="submit">
-              Sign in
+            <button 
+              className="sign-in-button" 
+              type="submit" 
+              disabled={isSubmitting}
+              style={{ opacity: isSubmitting ? 0.7 : 1 }}
+            >
+              {isSubmitting ? "Creating account..." : "Sign up"}
             </button>
           </form>
 
-          {/* DIVIDER */}
-          <div className="login-divider">
-            <span />
-            <p>OR</p>
-            <span />
-          </div>
-
-          {/* SIGN UP */}
+          {/* BACK TO LOGIN */}
           <button
-            className="sign-up-button"
+            className="back-button"
             type="button"
-            onClick={handleSignUp}
+            onClick={() => navigate("/login")}
+            disabled={isSubmitting}
           >
-            Sign up
+            ← Back to sign in
           </button>
-
-          <p className="account-note">
-            New to Chum Buddy? Create an account using your University of Sydney email.
-          </p>
         </div>
       </section>
     </main>
   );
 }
 
-export default LoginPage;
+export default New_signup;
