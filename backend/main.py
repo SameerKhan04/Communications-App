@@ -1,4 +1,6 @@
 from database import mock_users
+import requests
+import pathlib as pl
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -109,12 +111,27 @@ async def match_user(user_id: str):
 
 
 @app.post("/api/translate")
-async def translate_placeholder(message: Message):
+async def translate_placeholder(message: Message, src_lang, dest_lang):
     """Placeholder endpoint for the live translation feature."""
     original_text = message.text
-    
-    # TODO (Matthew): Plug Google Translate API call here
-    translated_text = f"[TRANSLATED] {original_text}"
+
+    url = "https://translation.googleapis.com/language/translate/v2"
+
+    request_body = {
+        "q": original_text,
+        "source": src_lang,
+        "target": dest_lang,
+        "format": "text"
+    }
+
+    api_path = pl.Path(__file__).resolve().parent
+    api_path = api_path / "api" / "api_key.txt"
+    with open(api_path) as f:
+        API_KEY = f.readline().strip("\n")
+
+    r = requests.post(url, headers={"X-goog-api-key": API_KEY, "Content-Type": "application/json"}, json=request_body)
+    return_data = r.json()
+    translated_text = return_data["data"]["translations"][0]["translatedText"]
 
     return {
         "original": original_text,
