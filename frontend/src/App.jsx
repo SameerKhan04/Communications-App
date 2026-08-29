@@ -1,58 +1,27 @@
-import {
-  Navigate,
-  Route,
-  Routes,
-} from "react-router";
-
-import LoginPage from "./pages/LoginPage";
-import ProfilePage from "./pages/ProfilePage";
-import EditProfilePage from "./pages/EditProfilePage";
-import UserProfilePage from "./pages/UserProfilePage";
-import Friends from "./pages/Friends";
+import { Navigate, Route, Routes } from "react-router";
 
 import "./App.css";
+import ChatPage from "./pages/ChatPage";
+import EditProfilePage from "./pages/EditProfilePage";
+import Friends from "./pages/Friends";
+import LoginPage from "./pages/LoginPage";
+import MessagesPage from "./pages/MessagesPage";
+import ProfilePage from "./pages/ProfilePage";
+import UserProfilePage from "./pages/UserProfilePage";
 
 function App() {
   return (
     <Routes>
-      <Route
-        path="/"
-        element={<Navigate to="/login" replace />}
-      />
+      <Route path="/" element={<Navigate to="/login" replace />} />
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/profile" element={<ProfilePage />} />
+      <Route path="/profile/edit" element={<EditProfilePage />} />
+      <Route path="/users/:userId" element={<UserProfilePage />} />
+      <Route path="/friends" element={<Friends />} />
+      <Route path="/messages" element={<MessagesPage />} />
+      <Route path="/messages/:chatId" element={<ChatPage />} />
 
-      <Route
-        path="/login"
-        element={<LoginPage />}
-      />
-
-      {/* My profile */}
-      <Route
-        path="/profile"
-        element={<ProfilePage />}
-      />
-
-      {/* Edit my profile */}
-      <Route
-        path="/profile/edit"
-        element={<EditProfilePage />}
-      />
-
-      {/* Someone else's profile */}
-      <Route
-        path="/users/:userId"
-        element={<UserProfilePage />}
-      />
-
-      {/* Friends */}
-      <Route
-        path="/friends"
-        element={<Friends />}
-      />
-
-      <Route
-        path="*"
-        element={<Navigate to="/login" replace />}
-      />
+      <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>
   );
 }
