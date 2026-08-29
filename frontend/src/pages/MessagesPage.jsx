@@ -1,16 +1,4 @@
-import {
-  addDoc,
-  arrayUnion,
-  collection,
-  doc,
-  getDoc,
-  getDocs,
-  onSnapshot,
-  query,
-  serverTimestamp,
-  where,
-  writeBatch,
-} from "firebase/firestore";
+import { addDoc, collection, doc, getDoc, onSnapshot, query, serverTimestamp, where } from "firebase/firestore";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { auth, db } from "../firebase";
@@ -30,11 +18,7 @@ function ChatRow({ chat, onClick }) {
 
   const name = otherUser?.name || `User ${otherUserId?.substring(0, 5)}...`;
   const avatar = otherUser?.profilePicture ? (
-    <img 
-      src={otherUser.profilePicture} 
-      alt={name} 
-      style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} 
-    />
+    <img src={otherUser.profilePicture} alt={name} style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
   ) : (
     name.charAt(0).toUpperCase()
   );
@@ -58,9 +42,6 @@ function MessagesPage() {
   const [chats, setChats] = useState([]);
   const [friends, setFriends] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [friendEmail, setFriendEmail] = useState("");
-  const [modalError, setModalError] = useState("");
-  const [addingFriend, setAddingFriend] = useState(false);
 
   // -----------------------------------------
   // AUTH + LIVE CHAT LIST
@@ -75,7 +56,7 @@ function MessagesPage() {
         return;
       }
 
-      // Load friends
+      // Load mutual match friends
       await loadFriends(user.uid);
 
       // Listen for chats involving current user
@@ -104,23 +85,18 @@ function MessagesPage() {
           } catch (error) {
             console.error("Error loading chats:", error);
           }
-        },
-        (error) => {
-          console.error("Chat listener error:", error);
         }
       );
     });
 
     return () => {
       unsubscribeAuth();
-      if (unsubscribeChats) {
-        unsubscribeChats();
-      }
+      if (unsubscribeChats) unsubscribeChats();
     };
   }, [navigate]);
 
   // -----------------------------------------
-  // LOAD FRIENDS
+  // LOAD FRIENDS FROM MATCHES
   // -----------------------------------------
 
   async function loadFriends(uid) {
@@ -142,11 +118,7 @@ function MessagesPage() {
       const friendProfiles = await Promise.all(
         friendIds.map(async (friendId) => {
           const friendSnapshot = await getDoc(doc(db, "users", friendId));
-
-          if (!friendSnapshot.exists()) {
-            return null;
-          }
-
+          if (!friendSnapshot.exists()) return null;
           return {
             id: friendSnapshot.id,
             ...friendSnapshot.data(),
@@ -162,83 +134,6 @@ function MessagesPage() {
   }
 
   // -----------------------------------------
-  // ADD MUTUAL FRIEND
-  // -----------------------------------------
-
-  async function handleAddFriend(event) {
-    event.preventDefault();
-
-    const currentUser = auth.currentUser;
-    if (!currentUser) return;
-
-    const cleanedEmail = friendEmail.trim().toLowerCase();
-    if (!cleanedEmail) return;
-
-    setModalError("");
-
-    if (cleanedEmail === currentUser.email?.toLowerCase()) {
-      setModalError("You can't add yourself.");
-      return;
-    }
-
-    setAddingFriend(true);
-
-    try {
-      // Find user by email
-      const usersQuery = query(
-        collection(db, "users"),
-        where("email", "==", cleanedEmail)
-      );
-
-      const snapshot = await getDocs(usersQuery);
-
-      if (snapshot.empty) {
-        setModalError("No user found with that email.");
-        return;
-      }
-
-      const newFriendDocument = snapshot.docs[0];
-      const newFriendId = newFriendDocument.id;
-
-      // Check existing friendship
-      const alreadyFriends = friends.some((friend) => friend.id === newFriendId);
-
-      if (alreadyFriends) {
-        setModalError("This person is already in your friends list.");
-        return;
-      }
-
-      // -----------------------------------------
-      // MUTUAL FRIENDSHIP BATCH UPDATE
-      // -----------------------------------------
-      const batch = writeBatch(db);
-      
-      const currentUserRef = doc(db, "users", currentUser.uid);
-      const newFriendRef = doc(db, "users", newFriendId);
-
-      // Add friend to current user
-      batch.update(currentUserRef, {
-        friends: arrayUnion(newFriendId),
-      });
-
-      // Add current user to friend
-      batch.update(newFriendRef, {
-        friends: arrayUnion(currentUser.uid),
-      });
-
-      await batch.commit();
-
-      setFriendEmail("");
-      await loadFriends(currentUser.uid);
-    } catch (error) {
-      console.error("Error adding friend:", error);
-      setModalError("Something went wrong while adding this friend.");
-    } finally {
-      setAddingFriend(false);
-    }
-  }
-
-  // -----------------------------------------
   // START / OPEN CHAT
   // -----------------------------------------
 
@@ -247,7 +142,6 @@ function MessagesPage() {
     if (!currentUser) return;
 
     try {
-      // Check loaded chats first
       const existingChat = chats.find((chat) => {
         const participants = chat.participants || [];
         return (
@@ -261,7 +155,6 @@ function MessagesPage() {
         return;
       }
 
-      // Create conversation if it doesn't exist
       const newChat = await addDoc(collection(db, "chats"), {
         participants: [currentUser.uid, friendId],
         lastMessage: "Say hi!",
@@ -288,11 +181,7 @@ function MessagesPage() {
           <button
             type="button"
             className="new-chat-button"
-            onClick={() => {
-              setModalError("");
-              setFriendEmail("");
-              setIsModalOpen(true);
-            }}
+            onClick={() => setIsModalOpen(true)}
           >
             + New Chat
           </button>
@@ -315,7 +204,7 @@ function MessagesPage() {
       </div>
 
       {/* =========================
-          NEW CHAT MODAL
+          NEW CHAT MODAL (MATCHES)
           ========================= */}
       {isModalOpen && (
         <div
@@ -327,41 +216,26 @@ function MessagesPage() {
             onClick={(event) => event.stopPropagation()}
           >
             <h2>Start a Chat</h2>
+            <p style={{ color: "#666", fontSize: "0.9rem", marginBottom: "16px" }}>
+              Select a match to start messaging.
+            </p>
 
-            {/* ADD FRIEND */}
-            <form className="add-friend-form" onSubmit={handleAddFriend}>
-              <input
-                type="email"
-                placeholder="Add friend by university email..."
-                value={friendEmail}
-                onChange={(event) => {
-                  setFriendEmail(event.target.value);
-                  setModalError("");
-                }}
-                required
-              />
-              <button type="submit" disabled={addingFriend}>
-                {addingFriend ? "Adding..." : "Add"}
-              </button>
-            </form>
-
-            {modalError && <p className="error-message">{modalError}</p>}
-
-            {/* FRIEND LIST */}
             <div className="friends-list">
-              <h3>Your Friends</h3>
-
               {friends.length === 0 ? (
                 <p className="empty-state">
-                  Add a friend above to start chatting.
+                  No matches yet. Head to the Discover page and connect with people!
                 </p>
               ) : (
                 friends.map((friend) => (
-                  <div key={friend.id} className="friend-row">
+                  <div key={friend.id} className="friend-row" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
                     <span>{friend.name || "USYD Student"}</span>
                     <button
                       type="button"
-                      onClick={() => startChat(friend.id)}
+                      onClick={() => {
+                        setIsModalOpen(false);
+                        startChat(friend.id);
+                      }}
+                      style={{ padding: "6px 12px", background: "var(--ochre)", color: "white", border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: "bold" }}
                     >
                       Chat
                     </button>

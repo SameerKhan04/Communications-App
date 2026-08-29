@@ -1,3 +1,5 @@
+// src/pages/New_signup.jsx
+
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { doc, setDoc } from "firebase/firestore";
 import { useState } from "react";
@@ -39,11 +41,9 @@ function New_signup() {
     setIsSubmitting(true);
 
     try {
-      // 1. Create the user in Firebase Authentication
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
-      // 2. Initialize the user's document in Firestore
       await setDoc(doc(db, "users", user.uid), {
         email: email.toLowerCase(),
         name: name.trim(),
@@ -58,7 +58,6 @@ function New_signup() {
         profilePicture: null,
       });
 
-      // 3. Send them to the edit profile page to fill out their preferences
       navigate("/profile/edit");
     } catch (err) {
       setError(err.message);
@@ -67,12 +66,11 @@ function New_signup() {
   }
 
   return (
-    <main className="login-page"> {/* Reusing login-page class for the same background styling */}
+    <main className="login-page">
       <div className="background-decoration decoration-one" />
       <div className="background-decoration decoration-two" />
 
       <section className="login-container">
-        {/* BRAND */}
         <div className="brand-section">
           <p className="brand-label">UNIVERSITY OF SYDNEY</p>
 
@@ -88,7 +86,6 @@ function New_signup() {
           </p>
         </div>
 
-        {/* SIGN UP CARD */}
         <div className="login-card">
           <div className="card-heading">
             <p className="small-heading">JOIN THE COMMUNITY</p>
@@ -96,7 +93,6 @@ function New_signup() {
             <p>Enter your details to get started.</p>
           </div>
 
-          {/* SIGN UP FORM */}
           <form onSubmit={handleSignUp}>
             <div className="login-form-group">
               <label htmlFor="name">Preferred Name</label>
@@ -151,4 +147,28 @@ function New_signup() {
               className="sign-in-button" 
               type="submit" 
               disabled={isSubmitting}
-              style={{ opacity
+              style={{ opacity: isSubmitting ? 0.7 : 1 }}
+            >
+              {isSubmitting ? "Creating account..." : "Sign up"}
+            </button>
+          </form>
+
+          <button
+            className="back-button"
+            type="button"
+            onClick={() => navigate("/login")}
+            disabled={isSubmitting}
+          >
+            ← Back to sign in
+          </button>
+
+          <p className="account-note">
+            New to Chum Buddies? Create an account using your University of Sydney email.
+          </p>
+        </div>
+      </section>
+    </main>
+  );
+}
+
+export default New_signup;

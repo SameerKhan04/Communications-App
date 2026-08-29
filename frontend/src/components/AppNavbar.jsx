@@ -1,3 +1,5 @@
+// src/components/AppNavbar.jsx
+
 import { signOut } from "firebase/auth";
 import { NavLink, useNavigate } from "react-router";
 
@@ -73,6 +75,18 @@ function AppNavbar() {
           }
         >
           Friends
+        </NavLink>
+
+
+        <NavLink
+          to="/matches"
+          className={({ isActive }) =>
+            isActive
+              ? "app-navbar-link active"
+              : "app-navbar-link"
+          }
+        >
+          Matches
         </NavLink>
 
 
