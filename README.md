@@ -11,6 +11,14 @@ Chum Buddies is a full-stack web application designed to help university student
 * **Dynamic Search & Filtering:** Easily search through your mutual connections by name, degree, or specific interests.
 * **Responsive Custom UI:** A clean, student-focused interface built with React, featuring custom branding, active state navigation, and smooth modal interactions.
 
+* **Student Profile:** Users can create and customise their own profile by adding a profile picture, username, biography, degree, major, interests, languages, societies and pronouns.
+
+* **Explore Friends:** After signing in, users can explore potential connections based on their compatibility and shared interests.
+
+* **Direct Messaging:** Users can privately message their mutual connections through the built-in direct messaging system.
+
+* **Friend Discovary** Users can view other students' profiles and discover people with similar academic backgrounds, interests, languages, and societies.
+
 ## Tech Stack
 
 **Frontend:**
@@ -26,6 +34,7 @@ Chum Buddies is a full-stack web application designed to help university student
 
 **Database & Authentication:**
 * Firebase Authentication
+* Friebase Storage (for profile and group images)
 * Cloud Firestore (NoSQL Database for users, swipes, and chats)
 
 ## Getting Started
@@ -99,12 +108,52 @@ npm run dev
 
 ## Project Structure Overview
 
-* **`frontend/src/`**: Contains all React code.
-  * **`components/`**: Reusable UI elements (e.g., `AppNavbar.jsx`).
-  * **`pages/`**: Main application views (`Friends.jsx`, `MessagesPage.jsx`, `ChatPage.jsx`, etc.).
-  * **`assets/`**: Static images, custom icons, and branding.
-* **`backend/`**: Contains the Python server.
-  * **`main.py`**: Houses the FastAPI endpoints (`/api/match`, `/api/translate`) and the Jaccard similarity logic.
+* **`frontend/`**: Contains the React/Vite frontend application.
+
+  * **`src/`**: Main React source code.
+    * **`components/`**: Reusable UI components such as navigation and shared interface elements.
+    * **`pages/`**: Main application views, including `LoginPage.jsx`, `ProfilePage.jsx`, `EditProfilePage.jsx`, `Friends.jsx`, `MessagesPage.jsx`, `ChatPage.jsx`, and `UserProfilePage.jsx`.
+    * **`assets/`**: Static images, logos, icons, and other branding assets.
+    * **`App.jsx`**: Defines the application's React Router routes and page navigation.
+    * **`main.jsx`**: Entry point for the React application.
+    * **`index.css`**: Global CSS styles and variables.
+  * **`package.json`**: Frontend dependencies and development scripts.
+
+* **`backend/`**: Contains the Python FastAPI server.
+
+  * **`main.py`**: Houses the FastAPI endpoints, including the matching and translation functionality.
+  * **Matching logic**: Calculates compatibility between students using shared profile attributes and Jaccard similarity.
+  * **Translation endpoint**: Handles requests for message translation using an external translation API.
+
+* **`firebase/`**: Firebase configuration and integration used for authentication, Firestore, and Storage.
+
+## Pages & Navigation
+
+Chum Buddies uses React Router to provide navigation between the different sections of the application.
+
+* **`LoginPage.jsx`**: Provides the sign-in and sign-up interface. Students can create an account and sign in using their university credentials.
+
+* **`ExplorePage.jsx`**: The main discovery page shown after signing in. Users can browse potential connections recommended by the matching algorithm based on their profile information and shared interests.
+
+* **`ProfilePage.jsx`**: Displays the current user's profile, including their profile picture, username, biography, degree, major, interests, languages, societies, and pronouns.
+
+* **`EditProfilePage.jsx`**: Allows users to update and customise their profile information, including their profile picture, personal details, interests, languages, and academic information.
+
+* **`UserProfilePage.jsx`**: Displays another student's public profile. Users can view their academic background, interests, languages, societies, and other information before deciding whether to connect with them.
+
+* **`Friends.jsx`**: Displays the user's mutual connections. Users can search and filter their friends by name, degree, or interests.
+
+* **`MessagesPage.jsx`**: Displays the user's conversations and provides access to their direct messages and group chats.
+
+* **`ChatPage.jsx`**: Provides the real-time messaging interface for individual and group conversations. Messages are stored using Firebase Firestore and can be translated to help overcome language barriers.
+
+### Navigation Flow
+
+The general user flow through the application is:
+
+`Sign Up / Sign In` -> `Explore Friends` -> `View Student Profile` -> `Express Interest` -> `Mutual Connection` -> `Friends` -> `Direct Messages / Group Chats`
+
+Users can also navigate between their **Profile**, **Friends**, and **Messages** sections while using the application.
 
 ## Contributing
 
@@ -116,6 +165,22 @@ Contributions are what make the open-source community such an amazing place to l
 4. Push to the Branch (`git push origin feature/AmazingFeature`)
 5. Open a Pull Request
 
+When contributing, please try to keep the existing project structure and coding style consistent. New features should also be tested locally before submitting a pull requiuest.
+
+## Future Improvments
+
+Some potential future improvements include:
+
+* Expanding the matching algorithm with additional compatibility factors.
+* Adding more advanced friend and connection recommendations.
+* Improving accessibility across the application.
+* Adding push notifications for new messages and connections.
+* Supporting additional languages for message translation.
+* Adding more customisation options for student profiles.
+* Deploying the application for use by students outside of the development environment.
+
 ## License
 
-IDK?
+This project was created as a university/hackathon project.
+
+Unless otherwise stated, the project is currently not distributed under a specific open-source licence. All rights are reserved by the project authors.
